@@ -157,6 +157,11 @@ bool symTable::rename(const std::string& oldName, const std::string& newName) {
 	auto node = syms.extract(oldName);
 	if(node.empty())
 		return false;
+	// A proctype's local table is named after it; rename it too, so qualified names follow.
+	auto complex = dynamic_cast<complexSymNode*>(node.mapped());
+	auto subTable = complex ? complex->getSubSymTable() : nullptr;
+	if(subTable && subTable->getNameSpace() == oldName)
+		subTable->setNameSpace(newName);
 	node.key() = newName;
 	syms.insert(std::move(node));
 	return true;

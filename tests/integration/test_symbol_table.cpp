@@ -90,3 +90,15 @@ TEST_F(SymbolTableTest, RenameOfUnknownNameFails)
   EXPECT_FALSE(globals->rename("nosuch", "other"));
   EXPECT_EQ(globals->lookup("other"), nullptr);
 }
+
+TEST_F(SymbolTableTest, RenamedProctypeQualifiedNamesFollow)
+{
+  auto proc = globals->lookup("test");
+  ASSERT_NE(proc, nullptr);
+  ASSERT_TRUE(proc->setName("software"));
+
+  EXPECT_EQ(globals->lookup("test._pid"), nullptr);
+  auto pid = globals->lookup("software._pid");
+  ASSERT_NE(pid, nullptr);
+  EXPECT_EQ(pid->getFullName(), globals->getFullNameSpace() + ".software._pid");
+}
