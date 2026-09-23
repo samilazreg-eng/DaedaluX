@@ -102,7 +102,8 @@ public:
 	
 	int getLineNb(void) const;
 	
-	void setName(const std::string& name);
+	// Returns false, leaving the symbol unchanged, if its table already has a symbol with that name.
+	bool setName(const std::string& name);
 
 	std::string getName(void) const;
 

@@ -149,14 +149,17 @@ void symTable::insert(symbol* sym) {
 	sym->setSymTable(this);
 }
 
-void symTable::rename(const std::string& oldName, const std::string& newName) {
+bool symTable::rename(const std::string& oldName, const std::string& newName) {
 	if(oldName == newName)
-		return;
-	assert(syms.find(oldName) != syms.end());
-	assert(syms.find(newName) == syms.end());
+		return syms.find(oldName) != syms.end();
+	if(syms.find(newName) != syms.end())
+		return false;
 	auto node = syms.extract(oldName);
+	if(node.empty())
+		return false;
 	node.key() = newName;
 	syms.insert(std::move(node));
+	return true;
 }
 
 void symTable::remove(const std::string& name) {

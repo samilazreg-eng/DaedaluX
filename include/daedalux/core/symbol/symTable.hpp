@@ -46,8 +46,9 @@ public:
 
 	void setNameSpace(const std::string& name);
 
-	// Re-keys a symbol of this table; called by symbol::setName.
-	void rename(const std::string& oldName, const std::string& newName);
+	// Re-keys a symbol of this table; called by symbol::setName. Returns false, changing nothing,
+	// if oldName is not in the table or newName already is.
+	bool rename(const std::string& oldName, const std::string& newName);
 
 	void print(int tab = 0) const;
 

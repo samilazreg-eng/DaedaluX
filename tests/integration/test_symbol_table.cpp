@@ -36,8 +36,8 @@ TEST_F(SymbolTableTest, RenameUpdatesTableAndPrintedProgram)
   ASSERT_NE(proc, nullptr);
   ASSERT_NE(array, nullptr);
 
-  proc->setName("software");
-  array->setName("array2");
+  ASSERT_TRUE(proc->setName("software"));
+  ASSERT_TRUE(array->setName("array2"));
 
   EXPECT_EQ(globals->lookup("software"), proc);
   EXPECT_EQ(globals->lookup("array2"), array);
@@ -70,4 +70,23 @@ TEST_F(SymbolTableTest, FullNameIsDotQualified)
   auto i = globals->lookup("i");
   ASSERT_NE(i, nullptr);
   EXPECT_EQ(i->getFullName(), globals->getFullNameSpace() + ".i");
+}
+
+TEST_F(SymbolTableTest, RenameToTakenNameFailsAndChangesNothing)
+{
+  auto array = globals->lookup("array");
+  auto i = globals->lookup("i");
+  ASSERT_NE(array, nullptr);
+  ASSERT_NE(i, nullptr);
+
+  EXPECT_FALSE(array->setName("i"));
+  EXPECT_EQ(array->getName(), "array");
+  EXPECT_EQ(globals->lookup("array"), array);
+  EXPECT_EQ(globals->lookup("i"), i);
+}
+
+TEST_F(SymbolTableTest, RenameOfUnknownNameFails)
+{
+  EXPECT_FALSE(globals->rename("nosuch", "other"));
+  EXPECT_EQ(globals->lookup("other"), nullptr);
 }

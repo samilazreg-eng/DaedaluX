@@ -57,11 +57,12 @@ int symbol::getLineNb(void) const
 	return lineNb;
 }
 
-void symbol::setName(const std::string &name)
+bool symbol::setName(const std::string &name)
 {
-	if(parent)
-		parent->rename(this->name, name);
+	if(parent && !parent->rename(this->name, name))
+		return false;
 	this->name = name;
+	return true;
 }
 
 std::string symbol::getName(void) const
