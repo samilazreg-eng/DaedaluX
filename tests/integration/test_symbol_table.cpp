@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 #include <filesystem>
-#include "../src/promela/parser/promela_loader.hpp"
+#include <daedalux/promela/parser/promela_loader.hpp>
 
 using namespace std;
 namespace fs = std::filesystem;
