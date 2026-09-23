@@ -59,6 +59,8 @@ int symbol::getLineNb(void) const
 
 void symbol::setName(const std::string &name)
 {
+	if(parent)
+		parent->rename(this->name, name);
 	this->name = name;
 }
 

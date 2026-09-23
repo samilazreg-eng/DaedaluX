@@ -29,6 +29,28 @@ protected:
   symTable * globals = nullptr;
 };
 
+TEST_F(SymbolTableTest, RenameUpdatesTableAndPrintedProgram)
+{
+  auto proc = globals->lookup("test");
+  auto array = globals->lookup("array");
+  ASSERT_NE(proc, nullptr);
+  ASSERT_NE(array, nullptr);
+
+  proc->setName("software");
+  array->setName("array2");
+
+  EXPECT_EQ(globals->lookup("software"), proc);
+  EXPECT_EQ(globals->lookup("array2"), array);
+  EXPECT_EQ(globals->lookup("test"), nullptr);
+  EXPECT_EQ(globals->lookup("array"), nullptr);
+
+  auto program = printedProgram();
+  EXPECT_NE(program.find("proctype software("), std::string::npos) << program;
+  EXPECT_NE(program.find("int array2[4]"), std::string::npos) << program;
+  EXPECT_NE(program.find("array2[i] = i"), std::string::npos) << program;
+  EXPECT_EQ(program.find("proctype test("), std::string::npos) << program;
+}
+
 TEST_F(SymbolTableTest, QualifiedLookupThroughProctype)
 {
   auto pid = globals->lookup("test._pid");

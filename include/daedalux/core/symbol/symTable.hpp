@@ -46,6 +46,9 @@ public:
 
 	void setNameSpace(const std::string& name);
 
+	// Re-keys a symbol of this table; called by symbol::setName.
+	void rename(const std::string& oldName, const std::string& newName);
+
 	void print(int tab = 0) const;
 
 	symbol* lookup(const std::string& name) const;
