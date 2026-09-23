@@ -42,6 +42,8 @@ public:
 
 	std::string getNameSpace(void) const;
 
+	std::string getFullNameSpace(void) const;
+
 	void setNameSpace(const std::string& name);
 
 	void print(int tab = 0) const;

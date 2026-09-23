@@ -35,6 +35,10 @@ std::string symTable::getNameSpace(void) const {
 	return name;
 }
 
+std::string symTable::getFullNameSpace(void) const {
+	return prev? prev->getFullNameSpace() + "." + name : name;
+}
+
 void symTable::setNameSpace(const std::string& name) {
 	this->name = name;
 }
@@ -87,6 +91,22 @@ void symTable::print(int tab) const {
 }
 
 symbol* symTable::lookup(const std::string& name) const {
+	if(std::find(name.begin(), name.end(), '.') != name.end()) {
+		auto pos = name.find('.');
+		auto sub = name.substr(0, pos);
+		auto res = syms.find(sub);
+		if(res != syms.cend()) {
+			auto sym = dynamic_cast<complexSymNode*>(res->second);
+			assert(sym);
+			auto symTable = sym->getSubSymTable();
+			return symTable->lookup(name.substr(pos+1));
+		}
+		else {
+			auto res = std::find_if(nexts.begin(), nexts.end(), [sub](symTable* tab) { return tab->getNameSpace() == sub; });
+			assert(res != nexts.end());
+			return (*res)->lookup(name.substr(pos+1));
+		}
+	}
 	const auto& res = syms.find(name);
 	return res == syms.cend()? nullptr : res->second;
 }

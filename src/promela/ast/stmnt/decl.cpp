@@ -244,8 +244,8 @@ void stmntFct::acceptVisitor(ASTVisitor* visitor) {
 
 procDecl::procDecl(ptypeSymNode *procSym, int lineNb)
 	: stmntFct(astNode::E_PROC_DECL, procSym->getBlock(), lineNb)
-	, name(procSym->getName())
-	, args(procSym->getArgs())
+	/*, name(procSym->getName())
+	, args(procSym->getArgs())*/
 	, active(procSym->getActiveExpr())
 	, procSym(procSym)
 {}
@@ -264,10 +264,10 @@ procDecl::operator std::string() const {
 		res += "[" + std::string(*active) + "] ";
 	}
 
-	res += "proctype " + name + "(";
+	res += "proctype " + procSym->getName() + "(";
 	unsigned int i = 0;
-	for(auto it : args)
-		res += it->getTypeName() + " " + it->getName() + (++i != args.size() ? "; " : "");
+	for(auto it : procSym->getArgs())
+		res += it->getTypeName() + " " + it->getName() + (++i != procSym->getArgs().size() ? "; " : "");
 
 	++tab_lvl; res += "){\n" + (getBlock()? stmnt::string(getBlock()) : "") + "}\n"; --tab_lvl;
 
