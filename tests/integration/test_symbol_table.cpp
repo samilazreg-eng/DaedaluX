@@ -64,3 +64,10 @@ TEST_F(SymbolTableTest, QualifiedLookupMissesReturnNull)
   EXPECT_EQ(globals->lookup("i._pid"), nullptr);       // prefix is not a complex symbol
   EXPECT_EQ(globals->lookup("test.nosuch"), nullptr);  // unknown member
 }
+
+TEST_F(SymbolTableTest, FullNameIsDotQualified)
+{
+  auto i = globals->lookup("i");
+  ASSERT_NE(i, nullptr);
+  EXPECT_EQ(i->getFullName(), globals->getFullNameSpace() + ".i");
+}
