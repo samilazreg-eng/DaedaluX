@@ -91,21 +91,18 @@ void symTable::print(int tab) const {
 }
 
 symbol* symTable::lookup(const std::string& name) const {
-	if(std::find(name.begin(), name.end(), '.') != name.end()) {
-		auto pos = name.find('.');
-		auto sub = name.substr(0, pos);
-		auto res = syms.find(sub);
+	auto pos = name.find('.');
+	if(pos != std::string::npos) {
+		auto prefix = name.substr(0, pos);
+		auto rest = name.substr(pos + 1);
+		auto res = syms.find(prefix);
 		if(res != syms.cend()) {
-			auto sym = dynamic_cast<complexSymNode*>(res->second);
-			assert(sym);
-			auto symTable = sym->getSubSymTable();
-			return symTable->lookup(name.substr(pos+1));
+			auto complex = dynamic_cast<complexSymNode*>(res->second);
+			auto subTable = complex ? complex->getSubSymTable() : nullptr;
+			return subTable ? subTable->lookup(rest) : nullptr;
 		}
-		else {
-			auto res = std::find_if(nexts.begin(), nexts.end(), [sub](symTable* tab) { return tab->getNameSpace() == sub; });
-			assert(res != nexts.end());
-			return (*res)->lookup(name.substr(pos+1));
-		}
+		auto next = std::find_if(nexts.begin(), nexts.end(), [&prefix](symTable* tab) { return tab->getNameSpace() == prefix; });
+		return next != nexts.end() ? (*next)->lookup(rest) : nullptr;
 	}
 	const auto& res = syms.find(name);
 	return res == syms.cend()? nullptr : res->second;

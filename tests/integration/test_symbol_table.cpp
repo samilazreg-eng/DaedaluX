@@ -1,48 +1,44 @@
-#include <gtest/gtest.h>
-#include <memory>
-#include <filesystem>
 #include <daedalux/promela/parser/promela_loader.hpp>
 
-using namespace std;
-namespace fs = std::filesystem;
+#include <gtest/gtest.h>
+#include <memory>
+#include <string>
 
-// Define a fixture for the tests
+// The model is passed inline, so the test does not depend on the working directory.
+static const std::string arrayModel = "int array[4];\n"
+                                      "int i = 0;\n"
+                                      "active proctype test(){\n"
+                                      "  do\n"
+                                      "  :: i < 4; array[i] = i; i++;\n"
+                                      "  :: else; break;\n"
+                                      "  od;\n"
+                                      "}\n";
+
 class SymbolTableTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        // Common setup code that will be called before each test
+  void SetUp() override
+  {
+    loader = std::make_unique<promela_loader>(arrayModel, nullptr);
+    globals = loader->getSymTable()->getSubSymTab("global");
+    ASSERT_NE(globals, nullptr);
+  }
 
-    }
+  std::string printedProgram() const { return stmnt::string(loader->getProgram()); }
 
-    void TearDown() override {
-        // Common teardown code that will be called after each test
-    }
+  std::unique_ptr<promela_loader> loader;
+  symTable * globals = nullptr;
 };
 
-// Test case for loading an invalid Promela file
-TEST_F(SymbolTableTest, LoadValidPromelaFile) {
+TEST_F(SymbolTableTest, QualifiedLookupThroughProctype)
+{
+  auto pid = globals->lookup("test._pid");
+  ASSERT_NE(pid, nullptr);
+  EXPECT_EQ(pid->getName(), "_pid");
+}
 
-    std::string current_directory = fs::current_path();
-    std::string file_name = "/test_files/basic/array.pml";
-    std::string file_path = current_directory + file_name;
-    const TVL* tvl = nullptr;
-    auto loader = std::make_unique<promela_loader>(file_path, tvl);
-
-    auto symbolTable = loader->getSymTable()->getSubSymTab("global");
-
-    symbolTable->print();
-    auto test = symbolTable->lookup("test");
-    test->setName("software");
-
-    auto program = loader->getProgram();
-    std::cout << stmnt::string(program) << std::endl;
-
-    auto array2 = symbolTable->lookup("array");
-    array2->setName("array2");
-
-    symbolTable->print();
-    std::cout << stmnt::string(program) << std::endl;
-    
-
-
+TEST_F(SymbolTableTest, QualifiedLookupMissesReturnNull)
+{
+  EXPECT_EQ(globals->lookup("nosuch._pid"), nullptr);  // unknown prefix
+  EXPECT_EQ(globals->lookup("i._pid"), nullptr);       // prefix is not a complex symbol
+  EXPECT_EQ(globals->lookup("test.nosuch"), nullptr);  // unknown member
 }
