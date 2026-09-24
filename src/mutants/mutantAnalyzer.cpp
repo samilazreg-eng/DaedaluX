@@ -144,19 +144,13 @@ void MutantAnalyzer::createMutants(unsigned int number_of_mutants, bool renameVa
   auto loader = std::make_unique<promela_loader>(original_file_path, nullptr);
   stmnt * program = loader->getProgram();
   unsigned int number_of_mutationPoints = program->assignMutables();
-  // Folder of the original program (empty, i.e. the working directory, for a bare file name)
-  std::string mutant_folder = (std::filesystem::path(original_file_path).parent_path() / "mutants").string();
+  // Each model gets its own folder next to it (the working directory for a bare file name), so models sharing a
+  // directory never touch each other's mutants. Nothing is deleted: a rerun overwrites the files it writes.
+  std::filesystem::path original(original_file_path);
+  std::string mutant_folder = (original.parent_path() / (original.stem().string() + "_mutants")).string();
+  std::filesystem::create_directories(mutant_folder);
 
   // Write original program to file so that it can be used by the mutation operators
-  // Create folder for mutants if it does not exist
-  if (!std::filesystem::exists(mutant_folder)) {
-    std::filesystem::create_directory(mutant_folder);
-  }
-  else {
-    std::filesystem::remove_all(mutant_folder);
-    std::filesystem::create_directory(mutant_folder);
-  }
-
   std::ofstream output;
   output.open(mutant_folder + "/original.pml");
   output << stmnt::string(program);
