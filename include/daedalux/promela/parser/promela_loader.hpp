@@ -34,4 +34,5 @@ class promela_loader {
         symTable* globalSymTab;
         stmnt* program;
         std::shared_ptr<fsm> automata;
+        std::filesystem::path scratchDir;
 };

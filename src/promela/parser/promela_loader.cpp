@@ -6,41 +6,76 @@
 #include "lexer.h"
 
 #include <assert.h>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <sstream>
+
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 
-promela_loader::promela_loader(std::string file_name, const TVL * tvl)
-    : globalSymTab(nullptr), program(nullptr), automata(nullptr)
-{
-  // The variable promelaFile should have the fileExtension .pml
-  if (file_name.find(".pml") == std::string::npos) {
-    //std::cerr << "The model file must have the extension .pml." << std::endl;
-    //exit(1);
-    std::ofstream tempFile("_temp.pml");
-    tempFile << file_name;
-    file_name = "_temp.pml";
-  }
-  // Copy the model file to a temporary file
-  fs::path sourcePath = file_name;
-  std::string current_directory = fs::current_path();
-  auto destinationFile = current_directory + "/__workingfile.tmp";
-  fs::path destinationPath = destinationFile;
-  try {
-    fs::copy(sourcePath, destinationPath, fs::copy_options::overwrite_existing);
-  }
-  catch (const fs::filesystem_error & e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-    std::cerr << "The fPromela file does not exist or is not readable!" << std::endl;
-    exit(1);
-  }
+namespace {
 
-  if (system("cpp __workingfile.tmp __workingfile.tmp.cpp") != 0) {
-    std::cerr << "Could not run the c preprocessor (cpp)." << std::endl;
+// A fork()ed child inherits the parent's loaders and registry, but not their directories: only the creator removes one.
+void removeIfCreatedHere(const fs::path & dir, pid_t creator)
+{
+  if (creator == getpid()) {
+    std::error_code ignored;
+    fs::remove_all(dir, ignored);
+  }
+}
+
+// Scratch directories still alive, with the process that created them. The loader and the parser leave through
+// exit(1) on errors, which skips ~promela_loader but runs static destructors: this one removes what is left.
+struct ScratchDirs {
+  std::map<fs::path, pid_t> live;
+  ~ScratchDirs()
+  {
+    for (const auto & [dir, creator] : live)
+      removeIfCreatedHere(dir, creator);
+  }
+};
+
+ScratchDirs & scratchDirs()
+{
+  static ScratchDirs dirs;
+  return dirs;
+}
+
+// Each load works in its own directory, so concurrent loads never share working files.
+fs::path makeScratchDir()
+{
+  auto pattern = (fs::temp_directory_path() / "daedalux-loader-XXXXXX").string();
+  if (mkdtemp(pattern.data()) == nullptr) {
+    std::cerr << "Could not create a temporary directory for the Promela loader." << std::endl;
     exit(1);
+  }
+  scratchDirs().live.emplace(pattern, getpid());
+  return pattern;
+}
+
+// Single-quoted for sh, with embedded single quotes closed, escaped and reopened.
+std::string shellQuoted(const fs::path & path)
+{
+  std::string quoted = "'";
+  for (char c : path.string())
+    quoted += c == '\'' ? std::string("'\\''") : std::string(1, c);
+  return quoted + "'";
+}
+
+} // namespace
+
+promela_loader::promela_loader(std::string file_name, const TVL * tvl)
+    : globalSymTab(nullptr), program(nullptr), automata(nullptr), scratchDir(makeScratchDir())
+{
+  // A string without ".pml" is Promela source rather than a file name.
+  fs::path sourcePath = file_name;
+  if (file_name.find(".pml") == std::string::npos) {
+    sourcePath = scratchDir / "__workingfile.tmp";
+    std::ofstream(sourcePath) << file_name;
   }
 
   // Read the original file
@@ -52,8 +87,18 @@ promela_loader::promela_loader(std::string file_name, const TVL * tvl)
   std::stringstream buffer;
   buffer << fileStream->rdbuf();
 
+  // cpp reads the model from stdin in the working directory, as the old working copy did: #include "..." resolves
+  // from the working directory, and line markers name "<stdin>", which has no digits for the lexer to take for a
+  // line number.
+  auto preprocessedFile = scratchDir / "__workingfile.tmp.cpp";
+  auto preprocess = "cpp < " + shellQuoted(sourcePath) + " > " + shellQuoted(preprocessedFile);
+  if (system(preprocess.c_str()) != 0) {
+    std::cerr << "Could not run the c preprocessor (cpp)." << std::endl;
+    exit(1);
+  }
+
   // Open the temporary file
-  yyin = fopen("__workingfile.tmp.cpp", "r");
+  yyin = fopen(preprocessedFile.c_str(), "r");
   if (yyin == nullptr) {
     std::cerr << "Could not open temporary working file (" << file_name << ")." << std::endl;
     exit(1);
@@ -121,4 +166,7 @@ promela_loader::~promela_loader(){
 		fclose(yyin);
 		yylex_destroy();
 	}
+
+  auto entry = scratchDirs().live.extract(scratchDir);
+  removeIfCreatedHere(scratchDir, entry.mapped());
 }
