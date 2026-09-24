@@ -1,10 +1,10 @@
+#include "../TestFilesUtils.hpp"
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <memory>
 
 #include <daedalux/algorithm.hpp>
 
-#include "../../../"
 
 // Define a fixture for the tests
 class SimilarityTest : public ::testing::Test {

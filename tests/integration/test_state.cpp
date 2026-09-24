@@ -1,4 +1,8 @@
-#include "../src/core/semantic/variable/state/composite.hpp"
+#include <filesystem>
+#include <daedalux/feature/tvl.hpp>
+#include <daedalux/promela/parser/promela_loader.hpp>
+#include <daedalux/promela/semantic/variable/state/initState.hpp>
+#include <daedalux/core/semantic/variable/state/composite.hpp>
 #include <gtest/gtest.h>
 
 class StateTest : public ::testing::Test {

@@ -1,9 +1,9 @@
-#include "../../src/algorithm/explore.hpp"
-#include "../../src/core/semantic/variable/state/composite.hpp"
-#include "../../src/core/semantic/variable/state/initState.hpp"
-#include "../../src/core/semantic/variable/transition/compositeTransition.hpp"
-#include "../../src/promela/parser/promela_loader.hpp"
-#include "../../src/visualizer/trace.hpp"
+#include <daedalux/algorithm/explore.hpp>
+#include <daedalux/core/semantic/variable/state/composite.hpp>
+#include <daedalux/promela/semantic/variable/state/initState.hpp>
+#include <daedalux/core/semantic/variable/transition/compositeTransition.hpp>
+#include <daedalux/promela/parser/promela_loader.hpp>
+#include <daedalux/visualizer/trace.hpp>
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <memory>

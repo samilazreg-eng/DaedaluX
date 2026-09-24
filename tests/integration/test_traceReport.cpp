@@ -1,11 +1,15 @@
+#include <filesystem>
+#include <daedalux/feature/tvl.hpp>
+#include <daedalux/promela/parser/promela_loader.hpp>
+#include <daedalux/promela/semantic/variable/state/initState.hpp>
 #include <gtest/gtest.h>
 #include <memory>
 #include <sstream>
 
-#include "../../src/core/semantic/variable/state/composite.hpp"
-#include "../../src/core/semantic/variable/transition/compositeTransition.hpp"
-#include "../../src/visualizer/trace.hpp"
-#include "../../src/visualizer/traceReport.hpp"
+#include <daedalux/core/semantic/variable/state/composite.hpp>
+#include <daedalux/core/semantic/variable/transition/compositeTransition.hpp>
+#include <daedalux/visualizer/trace.hpp>
+#include <daedalux/visualizer/traceReport.hpp>
 
 class TraceReportTest : public ::testing::Test {
 protected:

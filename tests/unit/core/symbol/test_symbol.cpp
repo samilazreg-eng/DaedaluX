@@ -1,7 +1,8 @@
+#include <daedalux/core/symbol/symTable.hpp>
 #include <gtest/gtest.h>
-#include "../../src/core/symbol/symbol.hpp"
-#include "../../src/promela/symbol/vardef/intSymNode.hpp"
-#include "../../src/promela/symbol/vardef/boolSymNode.hpp"
+#include <daedalux/core/symbol/symNode.hpp>
+#include <daedalux/promela/symbol/vardef/intSymNode.hpp>
+#include <daedalux/promela/symbol/vardef/boolSymNode.hpp>
 
 class SymbolTestFixture : public ::testing::Test {
 protected:

@@ -4,7 +4,7 @@
 
 #include <daedalux/core/automata.hpp>
 
-#include "../../src/algorithm/utils/bisimulationChecker.hpp"
+#include <daedalux/algorithm/utils/bisimulationChecker.hpp>
 
 
 // Define a fixture for the tests

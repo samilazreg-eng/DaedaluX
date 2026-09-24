@@ -1,4 +1,7 @@
-#include "../../src/mutants/spinRunner.cpp"
+#include <filesystem>
+#include <gtest/gtest.h>
+#include "../TestFilesUtils.hpp"
+#include <daedalux/mutants/spinRunner.hpp>
 #include <string>
 
 // Define a fixture for the tests

@@ -1,6 +1,6 @@
 #include <daedalux/mutants.hpp>
 
-#include "../../../TestFilesUtils.hpp"
+#include "../TestFilesUtils.hpp"
 
 #include <filesystem>
 #include <gtest/gtest.h>

@@ -1,4 +1,4 @@
-#include "../../src/core/logic/ltl.hpp"
+#include <daedalux/core/logic/ltl.hpp>
 
 #include <algorithm>
 #include <cctype>
