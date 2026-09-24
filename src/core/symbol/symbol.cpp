@@ -57,9 +57,19 @@ int symbol::getLineNb(void) const
 	return lineNb;
 }
 
+void symbol::setName(const std::string &name)
+{
+	this->name = name;
+}
+
 std::string symbol::getName(void) const
 {
 	return name;
+}
+
+std::string symbol::getFullName(void) const
+{
+	return parent? parent->getFullNameSpace() + name : name;
 }
 
 bool symbol::isGlobal(void) const

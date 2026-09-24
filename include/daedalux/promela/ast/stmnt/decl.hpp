@@ -155,7 +155,6 @@ public:
 	stmnt* deepCopy(void) const override;
 
 private:
-	std::string name;
 	std::list<varSymNode*> args;//?
 	exprConst* active;
 	ptypeSymNode* procSym;

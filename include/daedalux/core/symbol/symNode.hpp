@@ -102,7 +102,11 @@ public:
 	
 	int getLineNb(void) const;
 	
+	void setName(const std::string& name);
+
 	std::string getName(void) const;
+
+	std::string getFullName(void) const;
 	
 	bool isGlobal(void) const;
 	
