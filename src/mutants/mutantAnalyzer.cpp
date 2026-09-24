@@ -144,9 +144,8 @@ void MutantAnalyzer::createMutants(unsigned int number_of_mutants, bool renameVa
   auto loader = std::make_unique<promela_loader>(original_file_path, nullptr);
   stmnt * program = loader->getProgram();
   unsigned int number_of_mutationPoints = program->assignMutables();
-  // Folder of the original program
-  std::string folder = original_file_path.substr(0, original_file_path.find_last_of("/"));
-  std::string mutant_folder = folder + "/mutants";
+  // Folder of the original program (empty, i.e. the working directory, for a bare file name)
+  std::string mutant_folder = (std::filesystem::path(original_file_path).parent_path() / "mutants").string();
 
   // Write original program to file so that it can be used by the mutation operators
   // Create folder for mutants if it does not exist
