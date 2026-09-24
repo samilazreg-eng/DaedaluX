@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 #include <memory>
-#include "../../src/visualizer/stateToGraphViz.hpp"
-#include "../../src/core/semantic/variable/state/composite.hpp"
-#include "../../src/core/symbol/symTable.hpp"
-#include "../../src/core/automata/fsm.hpp"  // Include the necessary headers
-#include "../../src/core/automata/fsmEdge.hpp"
-#include "../../src/core/automata/fsmNode.hpp"
+#include <daedalux/visualizer/stateToGraphViz.hpp>
+#include <daedalux/core/semantic/variable/state/composite.hpp>
+#include <daedalux/core/symbol/symTable.hpp>
+#include <daedalux/core/automata/fsm.hpp>  // Include the necessary headers
+#include <daedalux/core/automata/fsmEdge.hpp>
+#include <daedalux/core/automata/fsmNode.hpp>
 
 
 class StateToGraphVizTest : public ::testing::Test {

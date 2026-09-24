@@ -12,6 +12,11 @@
 #include <gtest/gtest.h>
 #include <memory>
 
+#include "../../src/promela/parser/y.tab.hpp"
+#include "../../src/promela/parser/lexer.h"
+
+namespace fs = std::filesystem;
+
 // Define a fixture for the tests
 class DISABLED_SpecificationWriterTest : public ::testing::Test {
 protected:

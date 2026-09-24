@@ -1,13 +1,14 @@
+#include <daedalux/mutants/mutantAnalyzer.hpp>
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <memory>
 
-#include "../../src/algorithm/fsmExplorer.hpp"
-#include "../../src/algorithm/traceGenerator.hpp"
-#include "../../src/formulas/formulaCreator.hpp"
-#include "../../src/formulas/predicates/binaryPredicate.hpp"
-#include "../../src/formulas/predicates/statePredicate.hpp"
-#include "../../src/formulas/predicates/valuesPredicate.hpp"
+#include <daedalux/algorithm/fsmExplorer.hpp>
+#include <daedalux/algorithm/traceGenerator.hpp>
+#include <daedalux/formulas/formulaCreator.hpp>
+#include <daedalux/formulas/predicates/binaryPredicate.hpp>
+#include <daedalux/formulas/predicates/statePredicate.hpp>
+#include <daedalux/formulas/predicates/valuesPredicate.hpp>
 
 #include "../TestFilesUtils.hpp"
 

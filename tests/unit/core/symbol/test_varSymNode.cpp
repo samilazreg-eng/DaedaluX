@@ -1,5 +1,6 @@
+#include <fstream>
 #include <gtest/gtest.h>
-#include <stream>
+#include <sstream>
 #include <daedalux/promela/symbol/vardef/varSymNode.hpp>  // include the header, not the .cpp
 
 class VarSymNodeTest : public ::testing::Test {
