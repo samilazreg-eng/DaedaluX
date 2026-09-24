@@ -19,17 +19,23 @@ namespace fs = std::filesystem;
 
 namespace {
 
+// A fork()ed child inherits the parent's loaders and registry, but not their directories: only the creator removes one.
+void removeIfCreatedHere(const fs::path & dir, pid_t creator)
+{
+  if (creator == getpid()) {
+    std::error_code ignored;
+    fs::remove_all(dir, ignored);
+  }
+}
+
 // Scratch directories still alive, with the process that created them. The loader and the parser leave through
 // exit(1) on errors, which skips ~promela_loader but runs static destructors: this one removes what is left.
 struct ScratchDirs {
   std::map<fs::path, pid_t> live;
   ~ScratchDirs()
   {
-    for (const auto & [dir, owner] : live)
-      if (owner == getpid()) {
-        std::error_code ignored;
-        fs::remove_all(dir, ignored);
-      }
+    for (const auto & [dir, creator] : live)
+      removeIfCreatedHere(dir, creator);
   }
 };
 
@@ -161,7 +167,6 @@ promela_loader::~promela_loader(){
 		yylex_destroy();
 	}
 
-  std::error_code ignored;
-  fs::remove_all(scratchDir, ignored);
-  scratchDirs().live.erase(scratchDir);
+  auto entry = scratchDirs().live.extract(scratchDir);
+  removeIfCreatedHere(scratchDir, entry.mapped());
 }

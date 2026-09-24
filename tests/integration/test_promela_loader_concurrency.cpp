@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -165,6 +166,37 @@ TEST(PromelaLoaderConcurrencyTest, FailedLoadRemovesScratchDirectory)
   setenv("TMPDIR", tmp.path.c_str(), 1);
 
   EXPECT_EXIT(promela_loader("active proctype p(){ this is not promela }"), ::testing::ExitedWithCode(1), "Syntax error");
+  EXPECT_TRUE(fs::is_empty(tmp.path));
+
+  if (previous)
+    setenv("TMPDIR", saved.c_str(), 1);
+  else
+    unsetenv("TMPDIR");
+}
+
+// A fork()ed child inherits the loader object; destroying that copy must not delete the parent's scratch directory.
+TEST(PromelaLoaderConcurrencyTest, ForkedChildKeepsParentScratchDirectory)
+{
+  ScopedWorkingDirectory tmp; // used as a private TMPDIR, so concurrent tests cannot interfere
+  ScopedWorkingDirectory cwd; // keeps fsm_graphvis out of that TMPDIR
+  const char * previous = getenv("TMPDIR");
+  std::string saved = previous ? previous : "";
+  setenv("TMPDIR", tmp.path.c_str(), 1);
+
+  std::optional<promela_loader> loader;
+  loader.emplace(modelWithProctype("p"));
+  pid_t pid = fork();
+  ASSERT_NE(pid, -1);
+  if (pid == 0) {
+    loader.reset();
+    _exit(0);
+  }
+  int status = 0;
+  waitpid(pid, &status, 0);
+  EXPECT_TRUE(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+  EXPECT_FALSE(fs::is_empty(tmp.path)) << "the child removed the parent's scratch directory";
+
+  loader.reset();
   EXPECT_TRUE(fs::is_empty(tmp.path));
 
   if (previous)
