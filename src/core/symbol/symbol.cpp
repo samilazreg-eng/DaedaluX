@@ -57,9 +57,12 @@ int symbol::getLineNb(void) const
 	return lineNb;
 }
 
-void symbol::setName(const std::string &name)
+bool symbol::setName(const std::string &name)
 {
+	if(parent && !parent->rename(this->name, name))
+		return false;
 	this->name = name;
+	return true;
 }
 
 std::string symbol::getName(void) const
@@ -69,7 +72,7 @@ std::string symbol::getName(void) const
 
 std::string symbol::getFullName(void) const
 {
-	return parent? parent->getFullNameSpace() + name : name;
+	return parent? parent->getFullNameSpace() + "." + name : name;
 }
 
 bool symbol::isGlobal(void) const

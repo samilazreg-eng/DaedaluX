@@ -244,8 +244,6 @@ void stmntFct::acceptVisitor(ASTVisitor* visitor) {
 
 procDecl::procDecl(ptypeSymNode *procSym, int lineNb)
 	: stmntFct(astNode::E_PROC_DECL, procSym->getBlock(), lineNb)
-	/*, name(procSym->getName())
-	, args(procSym->getArgs())*/
 	, active(procSym->getActiveExpr())
 	, procSym(procSym)
 {}

@@ -1,48 +1,104 @@
-#include <gtest/gtest.h>
-#include <memory>
-#include <filesystem>
 #include <daedalux/promela/parser/promela_loader.hpp>
 
-using namespace std;
-namespace fs = std::filesystem;
+#include <gtest/gtest.h>
+#include <memory>
+#include <string>
 
-// Define a fixture for the tests
+// The model is passed inline, so the test does not depend on the working directory.
+static const std::string arrayModel = "int array[4];\n"
+                                      "int i = 0;\n"
+                                      "active proctype test(){\n"
+                                      "  do\n"
+                                      "  :: i < 4; array[i] = i; i++;\n"
+                                      "  :: else; break;\n"
+                                      "  od;\n"
+                                      "}\n";
+
 class SymbolTableTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        // Common setup code that will be called before each test
+  void SetUp() override
+  {
+    loader = std::make_unique<promela_loader>(arrayModel, nullptr);
+    globals = loader->getSymTable()->getSubSymTab("global");
+    ASSERT_NE(globals, nullptr);
+  }
 
-    }
+  std::string printedProgram() const { return stmnt::string(loader->getProgram()); }
 
-    void TearDown() override {
-        // Common teardown code that will be called after each test
-    }
+  std::unique_ptr<promela_loader> loader;
+  symTable * globals = nullptr;
 };
 
-// Test case for loading an invalid Promela file
-TEST_F(SymbolTableTest, LoadValidPromelaFile) {
+TEST_F(SymbolTableTest, RenameUpdatesTableAndPrintedProgram)
+{
+  auto proc = globals->lookup("test");
+  auto array = globals->lookup("array");
+  ASSERT_NE(proc, nullptr);
+  ASSERT_NE(array, nullptr);
 
-    std::string current_directory = fs::current_path();
-    std::string file_name = "/test_files/basic/array.pml";
-    std::string file_path = current_directory + file_name;
-    const TVL* tvl = nullptr;
-    auto loader = std::make_unique<promela_loader>(file_path, tvl);
+  ASSERT_TRUE(proc->setName("software"));
+  ASSERT_TRUE(array->setName("array2"));
 
-    auto symbolTable = loader->getSymTable()->getSubSymTab("global");
+  EXPECT_EQ(globals->lookup("software"), proc);
+  EXPECT_EQ(globals->lookup("array2"), array);
+  EXPECT_EQ(globals->lookup("test"), nullptr);
+  EXPECT_EQ(globals->lookup("array"), nullptr);
 
-    symbolTable->print();
-    auto test = symbolTable->lookup("test");
-    test->setName("software");
+  auto program = printedProgram();
+  EXPECT_NE(program.find("proctype software("), std::string::npos) << program;
+  EXPECT_NE(program.find("int array2[4]"), std::string::npos) << program;
+  EXPECT_NE(program.find("array2[i] = i"), std::string::npos) << program;
+  EXPECT_EQ(program.find("proctype test("), std::string::npos) << program;
+}
 
-    auto program = loader->getProgram();
-    std::cout << stmnt::string(program) << std::endl;
+TEST_F(SymbolTableTest, QualifiedLookupThroughProctype)
+{
+  auto pid = globals->lookup("test._pid");
+  ASSERT_NE(pid, nullptr);
+  EXPECT_EQ(pid->getName(), "_pid");
+}
 
-    auto array2 = symbolTable->lookup("array");
-    array2->setName("array2");
+TEST_F(SymbolTableTest, QualifiedLookupMissesReturnNull)
+{
+  EXPECT_EQ(globals->lookup("nosuch._pid"), nullptr);  // unknown prefix
+  EXPECT_EQ(globals->lookup("i._pid"), nullptr);       // prefix is not a complex symbol
+  EXPECT_EQ(globals->lookup("test.nosuch"), nullptr);  // unknown member
+}
 
-    symbolTable->print();
-    std::cout << stmnt::string(program) << std::endl;
-    
+TEST_F(SymbolTableTest, FullNameIsDotQualified)
+{
+  auto i = globals->lookup("i");
+  ASSERT_NE(i, nullptr);
+  EXPECT_EQ(i->getFullName(), globals->getFullNameSpace() + ".i");
+}
 
+TEST_F(SymbolTableTest, RenameToTakenNameFailsAndChangesNothing)
+{
+  auto array = globals->lookup("array");
+  auto i = globals->lookup("i");
+  ASSERT_NE(array, nullptr);
+  ASSERT_NE(i, nullptr);
 
+  EXPECT_FALSE(array->setName("i"));
+  EXPECT_EQ(array->getName(), "array");
+  EXPECT_EQ(globals->lookup("array"), array);
+  EXPECT_EQ(globals->lookup("i"), i);
+}
+
+TEST_F(SymbolTableTest, RenameOfUnknownNameFails)
+{
+  EXPECT_FALSE(globals->rename("nosuch", "other"));
+  EXPECT_EQ(globals->lookup("other"), nullptr);
+}
+
+TEST_F(SymbolTableTest, RenamedProctypeQualifiedNamesFollow)
+{
+  auto proc = globals->lookup("test");
+  ASSERT_NE(proc, nullptr);
+  ASSERT_TRUE(proc->setName("software"));
+
+  EXPECT_EQ(globals->lookup("test._pid"), nullptr);
+  auto pid = globals->lookup("software._pid");
+  ASSERT_NE(pid, nullptr);
+  EXPECT_EQ(pid->getFullName(), globals->getFullNameSpace() + ".software._pid");
 }

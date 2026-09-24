@@ -91,21 +91,18 @@ void symTable::print(int tab) const {
 }
 
 symbol* symTable::lookup(const std::string& name) const {
-	if(std::find(name.begin(), name.end(), '.') != name.end()) {
-		auto pos = name.find('.');
-		auto sub = name.substr(0, pos);
-		auto res = syms.find(sub);
+	auto pos = name.find('.');
+	if(pos != std::string::npos) {
+		auto prefix = name.substr(0, pos);
+		auto rest = name.substr(pos + 1);
+		auto res = syms.find(prefix);
 		if(res != syms.cend()) {
-			auto sym = dynamic_cast<complexSymNode*>(res->second);
-			assert(sym);
-			auto symTable = sym->getSubSymTable();
-			return symTable->lookup(name.substr(pos+1));
+			auto complex = dynamic_cast<complexSymNode*>(res->second);
+			auto subTable = complex ? complex->getSubSymTable() : nullptr;
+			return subTable ? subTable->lookup(rest) : nullptr;
 		}
-		else {
-			auto res = std::find_if(nexts.begin(), nexts.end(), [sub](symTable* tab) { return tab->getNameSpace() == sub; });
-			assert(res != nexts.end());
-			return (*res)->lookup(name.substr(pos+1));
-		}
+		auto next = std::find_if(nexts.begin(), nexts.end(), [&prefix](symTable* tab) { return tab->getNameSpace() == prefix; });
+		return next != nexts.end() ? (*next)->lookup(rest) : nullptr;
 	}
 	const auto& res = syms.find(name);
 	return res == syms.cend()? nullptr : res->second;
@@ -150,6 +147,24 @@ void symTable::insert(symbol* sym) {
 	assert(syms.find(sym->getName()) == syms.end());
 	syms[sym->getName()] = sym;
 	sym->setSymTable(this);
+}
+
+bool symTable::rename(const std::string& oldName, const std::string& newName) {
+	if(oldName == newName)
+		return syms.find(oldName) != syms.end();
+	if(syms.find(newName) != syms.end())
+		return false;
+	auto node = syms.extract(oldName);
+	if(node.empty())
+		return false;
+	// A proctype's local table is named after it; rename it too, so qualified names follow.
+	auto complex = dynamic_cast<complexSymNode*>(node.mapped());
+	auto subTable = complex ? complex->getSubSymTable() : nullptr;
+	if(subTable && subTable->getNameSpace() == oldName)
+		subTable->setNameSpace(newName);
+	node.key() = newName;
+	syms.insert(std::move(node));
+	return true;
 }
 
 void symTable::remove(const std::string& name) {
