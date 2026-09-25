@@ -253,13 +253,20 @@ if(BUILD_TESTING)
   FetchContent_MakeAvailable(googletest)
 
   enable_testing()
+  # The tests open their fixtures relative to the working directory (test_files/..., models/...), and some write
+  # next to them. They run on a copy in the build tree, so the committed examples are never modified.
+  set(TEST_FIXTURES_DIR "${CMAKE_BINARY_DIR}/test_fixtures")
+  # Start from a fresh copy on every configure: no fixture removed from examples/, no earlier run's output.
+  file(REMOVE_RECURSE "${TEST_FIXTURES_DIR}")
+  file(COPY "${CMAKE_SOURCE_DIR}/examples/test_files" "${CMAKE_SOURCE_DIR}/examples/models"
+       DESTINATION "${TEST_FIXTURES_DIR}")
   file(GLOB_RECURSE TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp")
   foreach(test_src IN LISTS TEST_SOURCES)
     get_filename_component(test_name ${test_src} NAME_WE)
     add_executable(${test_name} ${test_src})
     target_link_libraries(${test_name} PRIVATE daedalux_lib GTest::gtest_main)
     include(GoogleTest)
-    gtest_discover_tests(${test_name})
+    gtest_discover_tests(${test_name} WORKING_DIRECTORY "${TEST_FIXTURES_DIR}")
   endforeach()
 endif()
 
