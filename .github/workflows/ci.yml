@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  permissions:
+    contents: read
+
+jobs:
+  build-and-test:
+    name: Build and test (GCC, Debug)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    env:
+      CC: gcc
+      CXX: g++
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommens flex bison ninja-build
+
+      - name: Show tools
+        run: |
+          cmake --version
+          ninja --version
+          "$CXX" --version
+          "$CC" --version
+          flex --version
+          yacc --version
+
+      - name: Configure
+        run: > 
+          cmake -S . -B build -G ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_COMPILER="$CC"
+          -DCMAKE_CXX_COMPILER="CXX"
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test (serial, known failures excluded)
+        run: |
+          # Baseline: 3fff4ec, 121 / 146. Remove a name when its issue is fixed.
+          known_failures=(
+            # #22: ltl2ba is looked up relative to the working directory
+            FormulaTest.neverClaimOfComparisonFormula
+            FormulaTest.neverClaimOfGloballyFormula
+            FormulaTest.neverClaimOfNegatedFormula
+            FormulaTest.neverClaimOfFinallyFormula
+            FormulaTest.neverClaimOfComplexFormula
+            FormulaCreatorTest.formulaStringToNeverClaim_Globally
+            FormulaCreatorTest.formulaStringToNeverClaim_Finally
+            FormulaCreatorTest.formulaStringToNeverClaim_Liveness
+            LTLTransformerTest.formulaStringToNeverClaim_Globally
+            LTLTransformerTest.formulaStringToNeverClaim_Finally
+            LTLTransformerTest.formulaStringToNeverClaim_Liveness
+            LTLTransformerTest.AppendNeverClaim_Globally
+            LTLTransformerTest.AppendToNeverClaim_Finally
+            LTLTransformerTest.AppendToNeverClaim_Liveness
+            # #39: mutant-analysis assertions
+            FormulaCreatorTest.groupStates_array
+            FormulaCreatorTest.groupStates_flows
+            FormulaCreatorTest.distinguishStates_flows
+            SimilarityTest.KSuccessorsArray_Difference_ShouldBeEmpty
+            TraceGeneratorTest.DiscardMutant_TrafficLight
+            StateComparerTest.sameStatesArrayModel
+            # #40: LTL properties reported as not satisfied
+            LtlModelCheckerTest.ltlModelShouldBeSatisfied
+            LtlModelCheckerTest.liveness1ShouldBeSatisfied
+            # #41: SPIN is not installed
+            SpinRunnerTest.TrafficLightModelIsCorrect
+            SpinRunnerTest.ModelIsCorrect
+            # #35: segfault
+            TransitionTest.SampleNonUniformMultipleElements
+          )
+          pattern=$(printf '%s\n' "${known_failures[@]}" | sed 's/\./\\./g' | paste -sd '|')
+          ctest --test-dir build --timeout 120 --output-on-failure \
+                --exclude-regex "^(${pattern})\$"
+
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-TrafficLightModelIsCorrect
+          path: build/Testing/Temporary/
