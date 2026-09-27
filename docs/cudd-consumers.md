@@ -10,7 +10,7 @@ Findings are classified as in [build-characterization.md](build-characterization
 
 ## Setup
 
-- Commit: `1740647` (`main`; the CUDD rules are unchanged since `baseline/2026-09`)
+- Commit: `1740647` (`main`; the CUDD rules are unchanged since `baseline/2026-09`). The `CMakeLists.txt` line numbers below refer to this commit.
 - Environment: WSL Ubuntu 26.04, CMake 4.2.3, Ninja 1.13.2, GNU ld 2.46, GCC 15.2 and Clang 21.1.8
 - Fresh `git clone`, configured out of source with Ninja in Debug, full default-target build: `184/184`, rc 0, with each compiler.
 - The analysis uses the build's own records: `ninja -t deps` (headers each object actually included), `nm` (symbols each object leaves undefined, compared with the symbols `libcudd.a` defines), and `ninja -t commands` (link lines), re-run by hand with changes.
@@ -57,14 +57,14 @@ Findings are classified as in [build-characterization.md](build-characterization
 | tests | 34 | 20 | 6 | `test_ADDutils`, `test_fsm`, `test_fsmEdge`, `test_fsmNode`, `test_stateToGraphViz`, `test_transition` |
 
 - **OBSERVED:** The referenced symbols are the C++ wrapper classes (`ADD`, `BDD`, `ABDD`, `DD`, `Cudd`) and its `defaultError` handler. Only `tvl.cpp` calls the C API directly (`Cudd_PrintInfo`, `Cudd_PrintMinterm`). `tvl.cpp` is also the only object that creates a `Cudd` manager (`TVL::mgr`), apart from `test_ADDutils`.
-- **OBSERVED:** `tvl.cpp` needs `cuddInt.h` because it writes the manager's internal output stream: `formula.manager()->out = fopen(...)` and `fclose(formula.manager()->out)` at lines 292, 294, 365, 367, 441 and 454. Compiled without that include, it fails with `invalid use of incomplete type 'DdManager'`. `cudd.h` declares public accessors for this field (`Cudd_ReadStdout`, `Cudd_SetStdout`, lines 649–650).
+- **OBSERVED:** `tvl.cpp` needs `cuddInt.h` because it writes the manager's internal output stream: `formula.manager()->out = fopen(...)` then `fclose(formula.manager()->out)`, in `TVL::printBool(const ADD&)`, `TVL::toString(const ADD&)` and `TVL::printMinterms`. Compiled without that include, it fails with `invalid use of incomplete type 'DdManager'`. `cudd.h` declares public accessors for this field (`Cudd_ReadStdout`, `Cudd_SetStdout`).
 - **OBSERVED:** `tvl.cpp` is the only object that includes the generated `<build>/ext/cudd/build/config.h`, through `cuddInt.h`. The other 53 CUDD-including objects use only `cuddObj.hh` and `cudd.h`, which do not need it.
 - **INFERRED:** Only `daedalux_feature` needs CUDD's configure step to finish before it compiles. The six other object-library dependencies on `CUDD_project` (lines 205–211) serialize compilation behind the CUDD build without being needed for it. The link still needs `libcudd.a`, and it gets it through the dependencies of the imported targets.
 
 ### Transitive consumers (Q2)
 
 - **OBSERVED:** 20 library objects, `main_cli.cpp` and 14 test sources include `cuddObj.hh` without referencing any CUDD symbol. They get it through the public headers below, so they recompile when CUDD's headers change.
-- **OBSERVED:** At the target level, every executable gets CUDD only through `daedalux_lib`, which links CUDD `PUBLIC`: the CLI and all 34 test executables. The CLI also names CUDD itself, which changes nothing (next section).
+- **OBSERVED:** At the target level, the 34 test executables get CUDD only through `daedalux_lib`, which links CUDD `PUBLIC`. The CLI gets it the same way and also lists `CUDD::obj` and `CUDD::cudd` itself (`CMakeLists.txt` 238–242). Those direct items add nothing to its link line (next section).
 - **OBSERVED:** Linking each executable **without** `libcudd.a` (GCC build) shows which ones really need it. 25 fail (the CLI with 202 `undefined reference` lines), because the library objects they pull in reference CUDD. 10 link without it: `test_bisimulation`, `test_bitSymNode`, `test_intSymNode`, `test_ltl_creator`, `test_specification_writer`, `test_spinRunner`, `test_symTable`, `test_symbol`, `test_temporalSymNode` and `test_varSymNode`.
 - **OBSERVED:** Because `include_directories` is directory-scoped, every target in the project receives the CUDD include paths, including the GoogleTest targets fetched by `FetchContent` (`gtest-all.cc` is compiled with all eight `-I…cudd…` flags).
 - **INFERRED:** The build does not say who needs CUDD. The include path is global, the configure-step dependency is applied to every module, and the link dependency is attached to the aggregate library. The actual consumers can only be recovered from the compiled objects, as done here.
@@ -85,7 +85,7 @@ Findings are classified as in [build-characterization.md](build-characterization
 
 | Commit | CUDD configured with | Linked as |
 |---|---|---|
-| `fb2aa4d` (2022-10-15, first commit) | plain `./configure` (committed `config.log`, `OBJ_FALSE=''`) | `target_link_libraries(deadalux libobj.a libcudd.a)` from the committed `cplusplus/.libs` and `cudd/.libs`. The committed `libobj.a` contains only `cuddObj.o`, and the committed `libcudd.a` (76 members) contains no wrapper |
+| `fb2aa4d` (2022-10-15, first commit) | plain `./configure` (committed `config.log`, `OBJ_FALSE=''`) | `target_link_libraries(deadalux libobj.a libcudd.a)` (the target's spelling at the time) from the committed `cplusplus/.libs` and `cudd/.libs`. The committed `libobj.a` contains only `cuddObj.o`, and the committed `libcudd.a` (76 members) contains no wrapper |
 | `ec82629` (2025-06-27, alpha refactor) | `configure` without flags, then `make <src> check` | introduces `CUDD::obj` → `cplusplus/.libs/libobj.a` and `CUDD::cudd` → `cudd/.libs/libcudd.a`, both linked by `daedalux_lib` and the CLI |
 | `f3e2875` (2025-06-27) | no configure step (`CONFIGURE_COMMAND ""`). The flags `--enable-obj …` are written only into the new, unused `bootstrap_cudd` target | unchanged |
 | `3fd17b2` (2026-09-24, #4 / PR #34) | the `bootstrap_cudd` flags, including `--enable-obj`, out of source | `libobj.a` is no longer produced. Both targets now point to `libcudd.a` (90 members, including `cudd_libcudd_la-cuddObj.o`) |
@@ -125,7 +125,7 @@ Findings are classified as in [build-characterization.md](build-characterization
 ## Answers to the issue's questions
 
 1. **Direct users:** in the library, 13 objects in `core`, `algorithm`, `feature`, `promela` and `visualizer`; `formulas` and `mutants` use none. Two sources include CUDD themselves (`tvl.cpp`, `test_fsm.cpp`). Seven public headers include `cuddObj.hh`. In the tests, six test sources reference CUDD symbols. The CLI executable uses CUDD only through the library.
-2. **Transitive only:** 20 library objects, `main_cli.cpp` and 14 test sources see CUDD's headers without using its symbols. At the target level, the CLI and every test get CUDD only through `daedalux_lib`'s `PUBLIC` link. 10 test executables need no CUDD code at all.
+2. **Transitive only:** 20 library objects, `main_cli.cpp` and 14 test sources see CUDD's headers without using its symbols. At the target level, every test gets CUDD only through `daedalux_lib`'s `PUBLIC` link. The CLI also lists the two CUDD targets directly, without effect on its link line. 10 test executables need no CUDD code at all.
 3. **Two targets, one archive:** a leftover of CUDD's two-archive layout (`libobj.a` + `libcudd.a`, built without `--enable-obj`). Since `3fd17b2` configures with `--enable-obj`, the wrapper is inside `libcudd.a`, and both targets were pointed there.
 4. **Twice on the link line:** CMake keeps one occurrence per target, and `daedalux_lib` links two targets that name the same file.
 5. **Required?** No, with GNU ld on Linux, with GCC and with Clang: one copy after `libdaedalux_lib.a` gives byte-identical executables. macOS is **UNKNOWN**.
