@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       
       - name: Install build tools
         run: |
@@ -88,9 +88,9 @@ jobs:
                 --exclude-regex "^(${pattern})\$"
 
 
-      - name: Upload test logs
+      - name: Upload build logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-logs
           path: |
