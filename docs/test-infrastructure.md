@@ -23,8 +23,8 @@ Findings are classified as in [build-characterization.md](build-characterization
 - **GoogleTest** v1.14.0 is cloned from GitHub by `FetchContent` during the **first configure** of each build directory. That configure fails without network. Later configures, the build and `ctest` work offline. An offline machine can pass a local checkout with `-DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=<dir>`. `cmake --install` also installs GoogleTest and GoogleMock.
 - **Test creation:** every `tests/**/*.cpp` becomes one executable (34) linked with `daedalux_lib` and `GTest::gtest_main`. After each link, `gtest_discover_tests` runs the executable to list its cases and registers **each case as its own CTest test, run in its own process**: 149 tests, 146 enabled and 3 disabled. `tests/CMakeLists.txt` and its subdirectories are not used.
 - **Fixtures:** each configure deletes `<build>/test_fixtures` and copies `examples/test_files` and `examples/models` into it (1,086 files, 30 MB). The enabled tests use four directories of `test_files` and nothing from `models/` (28 MB).
-- **Working directory:** every test runs in `<build>/test_fixtures` and builds its paths as `current_path() + "/test_files/..."`. `ltl2ba` is looked up at `<cwd>/../src/bin/ltl2ba`, which does not exist in the build tree. That accounts for **14 of the 25 baseline failures**. The copy of `ltl2ba` committed at `src/bin/ltl2ba` is an ARM64 executable.
-- **Shared files:** all cases write into the same fixture copy: 11 committed fixtures rewritten in place, 9 `*_mutants` folders, 9 `.trace` files, and `fsm_graphvis`. Nothing is cleaned up. Only a reconfigure resets the copy.
+- **Working directory:** CTest starts every test in `<build>/test_fixtures`, and the tests build their paths as `current_path() + "/test_files/..."`. `ltl2ba` is looked up at `<cwd>/../src/bin/ltl2ba`, which does not exist in the build tree. That accounts for **14 of the 25 baseline failures**. The copy of `ltl2ba` committed at `src/bin/ltl2ba` is an ARM64 executable.
+- **Shared files:** 10 cases move to a private temporary directory: all 4 MutantOutputFolderTest cases and 6 of the 7 PromelaLoaderConcurrencyTest cases. The other 136 run in the shared fixture copy and write into it: 11 committed fixtures rewritten in place, 9 `*_mutants` folders, 9 `.trace` files, and `fsm_graphvis`. Nothing is cleaned up. Only a reconfigure resets the copy.
 - **Parallel risks, reproduced:**
   - A fixture rewritten in place was **emptied under `ctest -j8`** and stayed empty until the next configure (`mutants/array_mutant.pml`, the same pattern as #72 on another file).
   - Once `ltl2ba` is found, the fixed file name `__formula.tmp` makes **every** parallel run of the 14 LTL cases fail between 5 and 11 of them. #22 and the `ltl.cpp` part of #5 are therefore coupled.
@@ -112,7 +112,7 @@ Findings are classified as in [build-characterization.md](build-characterization
 - **OBSERVED:** `ltl2ba` is resolved as `current_path() / "../src/bin/ltl2ba"` (`src/core/logic/ltl.cpp:14`), which is `<build>/src/bin/ltl2ba`. The build does not create it. 14 cases fail with `Could not find the ltl2ba binary at <build>/test_fixtures/../src/bin/ltl2ba`: 5 FormulaTest, 3 FormulaCreatorTest and 6 LTLTransformerTest cases.
 - **OBSERVED:** The repository tracks `src/bin/ltl2ba` (added in `d0d1089`, 2024-06-21). It is an ARM aarch64 Linux executable, and on x86-64 it fails with `Exec format error`. **INFERRED:** Before PR #38, tests ran in the build directory. With a build directory such as `<source>/build`, the lookup reached this binary, but it could not run on x86-64.
 - **OBSERVED:** `ltl2ba` can be built from `src/libs/ltl2ba`, which is not part of the build. With CMake 4, this needs `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` (#64). With that build copied to `<build>/src/bin/ltl2ba`, the 14 cases pass serially, and the full serial run gives 135 / 146.
-- **OBSERVED:** Two suites move the process into a private `mkdtemp` directory and move it back afterwards: MutantOutputFolderTest and PromelaLoaderConcurrencyTest. PromelaLoaderConcurrencyTest also sets `TMPDIR` inside the process. The loader's scratch directories are created as `$TMPDIR/daedalux-loader-*`. None was left in `/tmp` after the runs.
+- **OBSERVED:** 10 cases move the process into a private `mkdtemp` directory and move it back afterwards: the 4 MutantOutputFolderTest cases and 6 of the 7 PromelaLoaderConcurrencyTest cases. The seventh, `ConcurrentLoadsInSameDirectoryDoNotMixModels`, stays in `<build>/test_fixtures`. Its forked children load inline sources and write `fsm_graphvis` there 160 times. Two PromelaLoaderConcurrencyTest cases also set `TMPDIR` inside the process. The loader's scratch directories are created as `$TMPDIR/daedalux-loader-*`. None was left in `/tmp` after the runs.
 
 ### External tools and environment
 
@@ -128,7 +128,7 @@ Findings are classified as in [build-characterization.md](build-characterization
 
 ### Shared files and parallel execution
 
-- **OBSERVED:** Under `ctest -j`, cases of the same executable run concurrently, and all cases share `<build>/test_fixtures`. The per-case write logs show these shared paths:
+- **OBSERVED:** Under `ctest -j`, cases of the same executable run concurrently. Every case starts in `<build>/test_fixtures`, and all but the 10 private-directory cases (see [Working directory and relative paths](#working-directory-and-relative-paths)) stay there. The per-case write logs show these shared paths:
 
   | Path in `test_fixtures` | Written by | Also used by | Status |
   |---|---|---|---|
@@ -138,7 +138,7 @@ Findings are classified as in [build-characterization.md](build-characterization
   | `*_mutants/` for `basic/array`, `flows`, `trafficlight`, `two_trafficlight`, `threeProcess` | 2 cases each | loaded by the same cases | overlapping writers |
   | `__formula.tmp` | 14 LTL cases | the same 14 cases | dormant until `ltl2ba` is found (#5, #22) |
   | `test_files/appendClaimTest/flows_temp.pml` | 3 LTLTransformerTest cases | — | dormant (#44) |
-  | `fsm_graphvis` | 60 cases in 13 suites | nobody reads it | no effect on results (#15) |
+  | `fsm_graphvis` | 61 cases in 14 suites | nobody reads it | no effect on results (#15) |
   | `trace_report_*.trace` | one TraceGeneratorTest case per file | — | no conflict |
 
 - **OBSERVED:** In-place rewrites (`LTLClaimsProcessor::removeClaimFromFile`, `src/core/logic/ltl.cpp:95-113`, which truncates and then rewrites):
@@ -166,11 +166,19 @@ Findings are classified as in [build-characterization.md](build-characterization
 
 None of these has been opened. They wait for the maintainer's decision.
 
+Severity uses the project's S0–S4 scale, which rates the risk to a buildable, testable and reproducible baseline, not how ugly the code is:
+
+- **S0:** blocks building, running, testing or reproducing.
+- **S1:** critical correctness or reliability problem: crash, undefined behaviour, data race, wrong results or data loss.
+- **S2:** major technical debt.
+- **S3:** improvement opportunity.
+- **S4:** cosmetic.
+
 | Kind | Target | Severity | Subject |
 |---|---|---|---|
 | Comment | #22 | S2 | The committed `src/bin/ltl2ba` is ARM64. The lookup accounts for 14 of the 25 baseline failures, and a local build of `ltl2ba` gives 135 / 146 serially |
 | Comment | #5 | S2 | The tests reach `__formula.tmp` once `ltl2ba` is found: 20 of 20 parallel runs failed. Land it with #22 |
-| Comment | #15 | S3 | 60 cases write `fsm_graphvis` into the shared fixture directory |
+| Comment | #15 | S3 | 61 cases write `fsm_graphvis` into the shared fixture directory |
 | New issue | — | S2 | Tests rewrite 11 committed fixtures in place (4 suites). `mutants/array_mutant.pml` was emptied under `ctest -j8` and stayed empty. This generalizes #72 |
 | New issue | — | S3 | Fixture lifecycle: the copy is refreshed only by a configure, test output accumulates across runs, and 28 MB of `models/` are copied but unused |
 | New issue | — | S3 | Test registration: no timeout (CI included), no labels, and a glob without `CONFIGURE_DEPENDS`. Remove or replace the unused `tests/**/CMakeLists.txt` |
