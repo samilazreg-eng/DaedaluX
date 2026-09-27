@@ -29,11 +29,12 @@ Findings are classified as in [build-characterization.md](build-characterization
 | 3.19.0, Ninja | rc 0, 0 warnings | rc 0, 35 executables | 121 / 146 |
 | 3.19.0, Unix Makefiles | rc 0, 0 warnings | rc 0, 35 executables | 121 / 146 |
 | 3.19.8, Ninja | rc 0, 0 warnings | rc 0, 35 executables | 121 / 146 |
+| 3.19.8, Unix Makefiles | rc 0, 0 warnings | rc 0, 35 executables | 121 / 146 |
 | 4.2.3, Ninja | rc 0, 0 warnings | rc 0, 35 executables | 121 / 146 |
 | 4.2.3, Unix Makefiles | rc 0, 0 warnings | rc 0, 35 executables | 121 / 146 |
 | 3.19.0 and 3.19.8, `cmake --preset=debug` | **rc 1**: `Unrecognized "version" field` | — | — |
 | 3.20.0, `cmake --preset=debug` | **rc 1**: `Unrecognized "version" field` | — | — |
-| 3.21.0, `cmake --preset=debug` + `cmake --build --preset=debug` | rc 0 | rc 0 | 121 / 146 after a fixture refresh (119 before it, see the test race below) |
+| 3.21.0, `cmake --preset=debug` + `cmake --build --preset=debug` | rc 0 | rc 0 | 121 / 146 after a fixture refresh, with `-j6` and serially (119 before it, see the test race below) |
 | 4.2.3, `cmake --preset debug` | rc 0 | rc 0 | 121 / 146 |
 | 3.19.0, Ninja, `-DBUILD_TESTING=OFF` | **rc 1**: `Unknown CMake command "configure_package_config_file"` | — | — |
 | 4.2.3, Ninja, `-DBUILD_TESTING=OFF` | **rc 1**: same error | — | — |
@@ -44,10 +45,9 @@ In every row that ran the tests, `daedalux_cli --help` returns 0.
 
 ### Configure, build and test with 3.19 (Q1–Q3)
 
-- **OBSERVED:** CMake 3.19.0 configures a fresh clone with Ninja and with Unix Makefiles: return code 0, no `CMake Warning`, no `CMake Deprecation Warning`, no `CMake Error`. The compiler is identified as GNU 15.2.0, as with 4.2.3. The external CUDD project and the GoogleTest `FetchContent` download both work.
-- **OBSERVED:** The default build (`cmake --build <dir> -j10`) returns 0 with both generators and produces `daedalux_cli` and the 34 test executables. With Ninja, the build log contains the same 75 compiler warnings as with 4.2.3 (same set after path normalization).
-- **OBSERVED:** `gtest_discover_tests` works with 3.19: `ctest` lists 146 tests plus 3 disabled ones, as with 4.2.3. The pass/fail result of each test is identical across all six test runs in the matrix (3.19.0 ×2, 3.19.8, 4.2.3 ×3). 121 / 146 is also the count recorded when `baseline/2026-09` was verified.
-- **OBSERVED:** 3.19.8 behaves like 3.19.0 on every point above.
+- **OBSERVED:** CMake 3.19.0 and 3.19.8 each configure a fresh clone with Ninja and with Unix Makefiles: return code 0, no `CMake Warning`, no `CMake Deprecation Warning`, no `CMake Error`. The compiler is identified as GNU 15.2.0, as with 4.2.3. The external CUDD project and the GoogleTest `FetchContent` download both work.
+- **OBSERVED:** The default build (`cmake --build <dir> -j10`) returns 0 with both generators and both 3.19 versions and produces `daedalux_cli` and the 34 test executables. With Ninja, the build log contains the same 75 compiler warnings as with 4.2.3 (same set after path normalization).
+- **OBSERVED:** `gtest_discover_tests` works with 3.19: `ctest` lists 146 tests plus 3 disabled ones, as with 4.2.3. The pass/fail result of each test is identical in every run of the matrix that ran the tests: 3.19.0 and 3.19.8 (Ninja and Makefiles each), 4.2.3 (Ninja, Makefiles, preset), and 3.21.0 (preset, after the fixture refresh, with `-j6` and serially). The only exception is the 3.21.0 run before that refresh, explained in the test race below. 121 / 146 is also the count recorded when `baseline/2026-09` was verified.
 - **INFERRED:** Nothing in the default configure, build and test path needs a CMake feature newer than 3.19.
 
 ### Differences from CMake 4.2.3 (Q4)
@@ -97,21 +97,19 @@ In every row that ran the tests, `daedalux_cli --help` returns 0.
 2. **Default targets:** all build with 3.19 (35 executables, rc 0).
 3. **Tests:** discovered and run. The count (146 + 3 disabled) and each result (121 pass, 25 known failures) are identical to CMake 4.2.3.
 4. **Version-specific failures:** only in `CMakePresets.json`: schema 3 needs 3.21, build presets need 3.20, and 3.19 does not accept the `--preset <name>` spelling used in the README. The `BUILD_TESTING=OFF` failure is not version-specific. The other differences (flag spelling, relative paths, discovery JSON files) do not change the result.
-5. **Is 3.19 valid?** Yes, for the CMake-file route that the baseline is verified with. The repository's other declarations disagree with it: the presets need 3.21, and the README says 3.16. Each of these needs a decision (follow-up 1).
+5. **Is 3.19 valid?** Yes, for the CMake-file route that the baseline is verified with. The repository's other declarations disagree with it: the presets need 3.21 (#70), and the README says 3.16 (#74).
 
-## Proposed follow-up issues
+## Follow-up issues
 
-These are proposals for separate issues. Nothing here has been changed, and none has been opened.
+These issues were opened for separate work. This report changes nothing.
 
-1. **Align the presets with the declared minimum.** This needs a maintainer decision between three options:
-   - (a) keep 3.19 and document that the presets need 3.21;
-   - (b) set the schema to `"version": 2`, which gives 3.20 with no content change, and document that;
-   - (c) raise `cmake_minimum_required` to 3.21, which changes the minimum.
-   In every case, `cmakeMinimumRequired` inside the file should state the real value.
-2. **Include `CMakePackageConfigHelpers` in `CMakeLists.txt`**, so that `-DBUILD_TESTING=OFF` configures. This is a confirmed defect on every CMake version, found here and related to #67.
-3. **Fix the README's CMake requirement** ("≥3.16" → the declared minimum), with the preset note from item 1. This could be folded into #47.
-4. **Make the two `MutantGenerationTest` Flows cases stop rewriting a shared fixture** (work on a per-test copy, or use a ctest `RESOURCE_LOCK`). This is a sibling of #44. It is active today: 1 in 40 concurrent runs, and the damaged fixture persists until the next configure.
-5. **Test the declared minimum in CI** once CI runs on `main` (#10): a job with the official CMake 3.19.0 binary next to the runner's current CMake.
+| Issue | Severity | Subject |
+|---|---|---|
+| #70 | S3 | Align the presets with the declared minimum: document that they need 3.21, set `"version": 2` (3.20), or raise `cmake_minimum_required` to 3.21. This needs a maintainer decision |
+| #71 | S2 | Include `CMakePackageConfigHelpers`, so that `-DBUILD_TESTING=OFF` configures on every CMake version. Related to #67 |
+| #74 | S4 | Fix the README's CMake requirement ("≥3.16"). Could be done with #47 |
+| #72 | S2 | Stop the two `MutantGenerationTest` Flows cases from rewriting a shared fixture. Sibling of #44 |
+| #73 | S3 | Build and test with the declared minimum in CI, once CI runs on `main` (#10) |
 
 ## Reproduction
 
