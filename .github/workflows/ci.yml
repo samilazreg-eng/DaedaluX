@@ -50,7 +50,7 @@ jobs:
 
       - name: Test (serial, known failures excluded)
         run: |
-          # Baseline: 3fff4ec, 121 / 146. Remove a name when its issue is fixed.
+          # Baseline: 3fffec, 121 / 146. Remove a name when its issue is fixed.
           known_failures=(
             # #22: ltl2ba is looked up relative to the working directory
             FormulaTest.neverClaimOfComparisonFormula
