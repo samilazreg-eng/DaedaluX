@@ -74,7 +74,7 @@ The consumer used for these tests is a `CMakeLists.txt` that calls `find_package
   | prefix + CUDD source directories, `-std=c++20` | 143 | 1 | `daedalux.hpp`: `daedalux/Visualizer.hpp: No such file or directory` |
   | prefix only, `-std=c++17` | 100 | 44 | the 30 above, 11 × `'concept' does not name a type`, 2 × `uint64_t` undeclared, 1 × `runtime_error` not in `std` |
 
-- **OBSERVED:** The exported target has no `INTERFACE_COMPILE_FEATURES`. The project sets `CMAKE_CXX_STANDARD 20`, which applies only to its own targets. A consumer that does not choose C++20 compiles with the compiler's default (C++17 for GCC 15), and 11 public headers then fail on `concept`.
+- **OBSERVED:** The exported target has no `INTERFACE_COMPILE_FEATURES`. The project sets `CMAKE_CXX_STANDARD 20`, which applies only to its own targets. A consumer that does not choose C++20 compiles with the compiler's default (C++17 for GCC 15), and 11 public headers then fail on `concept`. The minimal consumer below builds with C++17 because its only header, `promela_loader.hpp`, is not one of them.
 - **OBSERVED:** `include/daedalux/visualizer/trace.hpp` uses `uint64_t` without `<cstdint>`, and `include/daedalux/algorithm/elementStack.hpp` uses `std::runtime_error` without `<stdexcept>`. Both compile with C++20 only because other standard headers include them.
 - **OBSERVED:** `include/daedalux.hpp` includes `daedalux/Visualizer.hpp`, but the file is `include/daedalux/visualizer.hpp`. On ext4 the include fails. The same headers, copied to NTFS (case-insensitive) and compiled from there, compile. No source file or test includes `daedalux.hpp`, so the build never checks it. The line dates from `ec82629`.
 - **OBSERVED:** `include/daedalux/CLI11.hpp` (the vendored CLI11 library) is installed as a public header under the `daedalux/` directory.
@@ -174,7 +174,7 @@ Tool versions: the tracked parser files were made by Bison 3.8.2 and Flex 2.6.4 
 
 ## Answers to the acceptance criteria
 
-1. **Installation contents and consumer workflow:** documented in [Installation contents](#installation-contents) and [Package-consumer workflow](#package-consumer-workflow). The working workflow today needs the consumer to define the CUDD targets from a DaedaluX build tree and to use C++20.
+1. **Installation contents and consumer workflow:** documented in [Installation contents](#installation-contents) and [Package-consumer workflow](#package-consumer-workflow). The working workflow today needs the consumer to define the CUDD targets from a DaedaluX build tree C++20 is needed only when the consumer includes one of the 11 public headers that use concepts. The consumer used here includes `promela_loader.hpp`, which is not one of them, so it also builds with the default C++17.
 2. **Missing or incorrect exported dependencies:** CUDD (targets, archive, headers) and the C++20 requirement. GoogleTest is installed when it should not be.
 3. **Portability assumptions:** listed with evidence under [Portability assumptions](#portability-assumptions).
 4. **Reproducibility risks and tool versions:** under [Reproducibility](#reproducibility).
