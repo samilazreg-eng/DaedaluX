@@ -179,26 +179,25 @@ Tool versions: the tracked parser files were made by Bison 3.8.2 and Flex 2.6.4 
 3. **Portability assumptions:** listed with evidence under [Portability assumptions](#portability-assumptions).
 4. **Reproducibility risks and tool versions:** under [Reproducibility](#reproducibility).
 5. **Supported platforms and package guarantees:** Linux x86-64 with GCC is validated. The rest is recorded as open decisions above.
-6. **Fixes deferred:** this report changes nothing. The follow-ups are listed below.
+6. **Fixes deferred:** this report changes nothing. The follow-up issues are listed below.
 
 ## Follow-up issues
 
-These are proposals. They have not been opened yet, and they need the maintainer's review.
+These issues were opened for separate work. This report changes nothing. The GoogleTest and CTest-file issues also cover the matching findings of #65 (`test-infrastructure.md`).
 
-| Proposal | Severity | Subject |
+| Issue | Severity | Subject |
 |---|---|---|
-| New issue | S2 | Make `find_package(daedalux)` work: install and export CUDD, or remove it from the public interface (decision 2) |
-| New issue | S3 | Export the C++20 requirement (`target_compile_features(daedalux_lib PUBLIC cxx_std_20)`) and add the missing `<cstdint>` and `<stdexcept>` includes |
-| New issue | S3 | Fix the case of `daedalux/visualizer.hpp` in `daedalux.hpp`, and compile the umbrella header in the build so that it stays valid |
-| New issue | S3 | Keep GoogleTest out of the install and the archives (`INSTALL_GTEST OFF`) |
-| New issue | S3 | Set the `CPACK_*` variables before `include(CPack)` (decision 5) |
-| New issue | S3 | Check for Bison and Flex at configure time (`find_package(BISON)`, `find_package(FLEX)`) |
-| New issue | S3 | Pass the project's compiler and build type to CUDD's `configure` |
-| New issue | S3 | Allow offline configure: pin GoogleTest by commit hash, or use an installed GoogleTest |
-| New issue | S3 | Fix or remove the Docker scripts (`build_image.sh`, `docker/Dockerfile`) |
-| New issue | S4 | Remove the committed `CTestTestfile.cmake` and `DartConfiguration.tcl` |
-| Comment on #22 | — | Add the evidence: the committed `src/bin/ltl2ba` is ARM64-only, and 14 of the 25 baseline failures come from the lookup |
-| Comment on #10 | — | The CI matrix declares `gcc` and `clang`, but no step uses the compiler |
+| #77 | S2 | Make `find_package(daedalux)` work: install and export CUDD, or remove it from the public interface (decision 2) |
+| #78 | S3 | Export the C++20 requirement (`target_compile_features(daedalux_lib PUBLIC cxx_std_20)`) and add the missing `<cstdint>` and `<stdexcept>` includes |
+| #79 | S3 | Fix the case of `daedalux/visualizer.hpp` in `daedalux.hpp`, and compile the umbrella header in the build so that it stays valid |
+| #80 | S3 | GoogleTest: pin it, allow an offline configure, and keep it out of the install and the archives (`INSTALL_GTEST OFF`) |
+| #81 | S3 | Set the `CPACK_*` variables before `include(CPack)` (decision 5) |
+| #82 | S3 | Check for Bison and Flex at configure time (`find_package(BISON)`, `find_package(FLEX)`) |
+| #83 | S3 | Pass the project's compiler and build type to CUDD's `configure` |
+| #84 | S3 | Fix or remove the Docker scripts (`build_image.sh`, `docker/Dockerfile`) |
+| #85 | S4 | Remove the committed `CTestTestfile.cmake` and `DartConfiguration.tcl` |
+| #22 (comment) | — | The committed `src/bin/ltl2ba` is ARM64-only, and 14 of the 25 baseline failures come from the lookup |
+| #10 (comment) | — | The CI matrix declares `gcc` and `clang`, but no step uses the compiler |
 
 ## Reproduction
 
