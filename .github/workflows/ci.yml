@@ -93,4 +93,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-logs
-          path: build/Testing/Temporary/
+          path: |
+            build/Testing/Temporary/
+            build/compile_commands.json
