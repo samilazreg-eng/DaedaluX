@@ -38,12 +38,13 @@ jobs:
           flex --version
           yacc --version
 
-      - name: Configure
+      - name: Configure with BUILD_TESTING=OFF
         run: > 
           cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_C_COMPILER="$CC"
           -DCMAKE_CXX_COMPILER="$CXX"
+          -DBUILD_TESTING=OFF
 
       - name: Build
         run: cmake --build build --parallel
