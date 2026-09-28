@@ -294,6 +294,9 @@ install(EXPORT daedaluxTargets
     NAMESPACE daedalux::
     DESTINATION lib/cmake/daedalux
 )
+
+include(CMakePackageConfigHelpers)
+
 configure_package_config_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/daedaluxConfig.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/daedaluxConfig.cmake"
