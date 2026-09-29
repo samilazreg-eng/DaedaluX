@@ -61,7 +61,8 @@ target_include_directories(
 
 target_link_libraries(
     daedalux_promela
-    PRIVATE
+    PUBLIC
+        daedalux_parser
 )
 
 target_compile_features(
