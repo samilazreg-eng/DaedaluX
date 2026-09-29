@@ -187,7 +187,7 @@ By default, the tool writes its trace and results to `example.pml.out` in the cu
 Before building, install:
 
 - A C++20-compatible compiler (GCC ≥10 or Clang ≥11)  
-- CMake ≥3.16  
+- CMake ≥3.21 (required by the project and its CMake presets)
 - Ninja build system  
 - Flex & Bison (for Promela parsing)  
 - [CUDD](https://github.com/ivmai/cudd) (Binary Decision Diagrams library)
