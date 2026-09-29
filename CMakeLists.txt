@@ -13,7 +13,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS_COMMANDS ON)
 # --------------------------------------------------------------------
 
 
-option(BUILD_EXAMPLES "Build example binaries" OFF)
 option(ENABLE_SANITIZERS "Enable Address/Undefined sanitizers" OFF)
 
 # --------------------------------------------------------------------
