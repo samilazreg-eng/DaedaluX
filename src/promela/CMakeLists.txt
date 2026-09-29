@@ -2,8 +2,6 @@ add_library(daedalux_promela OBJECT)
 
 add_subdirectory(parser)
 
-add_dependencies(daedalux_promela promela_parser)
-
 target_sources(
     daedalux_promela
     PRIVATE
@@ -53,16 +51,18 @@ target_sources(
         symbol/vardef/utypeSymNode.cpp 
         symbol/vardef/variantSymNode.cpp 
         symbol/vardef/varSymNode.cpp
-
-        parser/lex.yy.cpp
-        parser/promela_loader.cpp
-        parser/y.tab.cpp
 )
 
 target_include_directories(
     daedalux_promela 
     PUBLIC 
         ${PROJECT_SOURCE_DIR}/include
+)
+
+target_link_libraries(
+    daedalux_promela
+    PUBLIC
+        promela_parser
 )
 
 target_compile_features(
