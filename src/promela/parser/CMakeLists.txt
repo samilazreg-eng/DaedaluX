@@ -1,56 +1,55 @@
 # --------------------------------------------------------------------
 # 1) Parser generation (Flex & Bison)
 # --------------------------------------------------------------------
-set(PARSER_Y   
-    "${CMAKE_CURRENT_SOURCE_DIR}/promela.y"
+
+option(
+    DAEDALUX_REGENERATE_PROMELA_PARSER
+    "Enable the promela parser regeneration target"
+    OFF
 )
 
-set(LEXER_L    
-    "${CMAKE_CURRENT_SOURCE_DIR}/promela.l"
-)
+set(PARSER_Y "${CMAKE_CURRENT_SOURCE_DIR}/promela.y")
+set(LEXER_L "${CMAKE_CURRENT_SOURCE_DIR}/promela.l")
+set(PARSER_CPP "${CMAKE_CURRENT_SOURCE_DIR}/y.tab.cpp")
+set(LEXER_CPP "${CMAKE_CURRENT_SOURCE_DIR}/lex.yy.cpp")
 
-set(PARSER_CPP 
-    "${CMAKE_CURRENT_SOURCE_DIR}/y.tab.cpp"
-)
 
-set(LEXER_CPP  
-    "${CMAKE_CURRENT_SOURCE_DIR}/lex.yy.cpp"
-)
+if(DAEDALUX_REGENERATE_PROMELA_PARSER)
 
-add_custom_command(
-    OUTPUT 
-        ${PARSER_CPP}
-    
-    COMMAND 
-        yacc -y -d -o ${PARSER_CPP} ${PARSER_Y}
-    
-    DEPENDS 
-        ${PARSER_Y}
-    
-    COMMENT 
-        "[Parser] Generating y.tab.cpp"
-)
+    find_package(BISON REQUIRED)
+    find_package(FLEX REQUIRED)
 
-add_custom_command(
-    OUTPUT 
-        ${LEXER_CPP}
-    
-    COMMAND 
-        flex -o ${LEXER_CPP} ${LEXER_L}
-    
-    DEPENDS 
-        ${LEXER_L}
-    
-    COMMENT 
-        "[Lexer] Generating lex.yy.cpp"
-)
+    add_custom_target(
+        regenerate_promela_parser
 
-# Make parser generation a standalone target
-add_custom_target(
+        COMMAND
+            "${BISON_EXECUTABLE}"
+            -y -d
+            -o "${PARSER_CPP}"
+            "${PARSER_Y}"
+
+        COMMAND
+            "${FLEX_EXECUTABLE}"
+            -o "${LEXER_CPP}"
+            "${LEXER_L}"
+
+        WORKING_DIRECTORY
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+
+        COMMENT
+            "Regenerating committed Promela parser sources"
+
+        VERBATIM
+    )
+
+endif()
+
+add_library(promela_parser INTERFACE)
+
+target_sources(
     promela_parser
-    DEPENDS 
-        ${PARSER_CPP} 
+    INTERFACE
+        ${PARSER_CPP}
         ${LEXER_CPP}
-    
-    COMMENT "Generate Promela parser sources"
+        ${CMAKE_CURRENT_SOURCE_DIR}/promela_loader.cpp
 )
