@@ -6,15 +6,12 @@ project(
   LANGUAGES CXX
 )
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS_COMMANDS ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # --------------------------------------------------------------------
 # Project options
 # --------------------------------------------------------------------
 
-
-option(BUILD_EXAMPLES "Build example binaries" OFF)
-option(ENABLE_SANITIZERS "Enable Address/Undefined sanitizers" OFF)
 
 # --------------------------------------------------------------------
 # Language configuration

@@ -44,21 +44,11 @@ target_include_directories(
         $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
 )
 
-
-if(ENABLE_SANITIZERS)
-    target_compile_options(
-        daedalux_lib 
-        PRIVATE
-            -fsanitize=address,undefined 
-            -fno-omit-frame-pointer
-    )
-
-    target_link_libraries(
-        daedalux_lib 
-        PRIVATE
-            -fsanitize=address,undefined
-    )
-endif()
+target_compile_features(
+    daedalux_lib
+    PUBLIC
+        cxx_std_20
+)
 
 # CLI
 
