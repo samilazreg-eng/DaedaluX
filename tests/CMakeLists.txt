@@ -73,6 +73,8 @@ foreach(test_src IN LISTS TEST_SOURCES)
         ${test_name}
         WORKING_DIRECTORY
             "${TEST_FIXTURES_DIR}"
+        PROPERTIES
+            TIMEOUT 120
     )
             
 
