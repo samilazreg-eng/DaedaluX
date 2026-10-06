@@ -44,6 +44,7 @@ file(
 
 file(
     GLOB_RECURSE TEST_SOURCES
+    CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
 )
 
