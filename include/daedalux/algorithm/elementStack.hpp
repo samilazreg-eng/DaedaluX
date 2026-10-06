@@ -6,6 +6,7 @@
 #include <stack>
 #include <stdexcept>
 #include <set>
+#include <stdexcept>
 
 #include <daedalux/core/semantic/variable/state.hpp>
 

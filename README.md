@@ -87,7 +87,7 @@ If you ever need manual control over build steps:
 2. **Build & Test**:
 
    ```bash
-   cmake --build --preset release   # uses CMakePresets.json
+   cmake --build .
    ctest --output-on-failure
    ```
 
@@ -102,7 +102,7 @@ Use the provided [CMakePresets.json](/CMakePresets.json) for one-command builds:
 ```bash
 cmake --preset release
 cmake --build --preset release
-cmake --install --preset release
+cmake --install build --prefix "$HOME/.local"
 ```
 
 ---
@@ -187,7 +187,7 @@ By default, the tool writes its trace and results to `example.pml.out` in the cu
 Before building, install:
 
 - A C++20-compatible compiler (GCC ≥10 or Clang ≥11)  
-- CMake ≥3.16  
+- CMake ≥3.21 (required by the project and its CMake presets)
 - Ninja build system  
 - Flex & Bison (for Promela parsing)  
 - [CUDD](https://github.com/ivmai/cudd) (Binary Decision Diagrams library)

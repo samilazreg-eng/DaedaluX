@@ -2,7 +2,6 @@
 
 include(CMakeFindDependencyMacro)
 
-# find_dependency(SomeLib REQUIRED)
+# Dependencies will be declared here once the installed dependency model is defined.
 
 include("${CMAKE_CURRENT_LIST_DIR}/daedaluxTargets.cmake")
-
