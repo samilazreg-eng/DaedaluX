@@ -9,8 +9,7 @@
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": "ON",
-        "ENABLE_SANITIZERS": "OFF"
+        "BUILD_TESTING": "ON"
       }
     },
     {
@@ -20,8 +19,7 @@
       "binaryDir": "${sourceDir}/build-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "BUILD_TESTING": "ON",
-        "ENABLE_SANITIZERS": "OFF"
+        "BUILD_TESTING": "ON"
       }
     }
   ],
