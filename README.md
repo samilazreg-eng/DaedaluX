@@ -87,7 +87,7 @@ If you ever need manual control over build steps:
 2. **Build & Test**:
 
    ```bash
-   cmake --build --preset release   # uses CMakePresets.json
+   cmake --build .
    ctest --output-on-failure
    ```
 
@@ -102,7 +102,7 @@ Use the provided [CMakePresets.json](/CMakePresets.json) for one-command builds:
 ```bash
 cmake --preset release
 cmake --build --preset release
-cmake --install --preset release
+cmake --install build --prefix "$HOME/.local"
 ```
 
 ---
