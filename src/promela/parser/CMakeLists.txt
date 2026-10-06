@@ -16,8 +16,8 @@ set(LEXER_CPP "${CMAKE_CURRENT_SOURCE_DIR}/lex.yy.cpp")
 
 if(DAEDALUX_REGENERATE_PROMELA_PARSER)
 
-    find_package(BISON REQUIRED)
-    find_package(FLEX REQUIRED)
+    find_package(BISON 3.8.2 REQUIRED)
+    find_package(FLEX 2.6.4 REQUIRED)
 
     add_custom_target(
         regenerate_promela_parser
