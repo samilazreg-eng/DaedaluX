@@ -57,6 +57,26 @@ foreach(test_src IN LISTS TEST_SOURCES)
         NAME_WE
     )
 
+    # The directory below tests/ is the test's label.
+    file(
+        RELATIVE_PATH test_rel
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${test_src}"
+    )
+
+    string(
+        REGEX MATCH "^[^/]+"
+        test_label
+        "${test_rel}"
+    )
+
+    if(NOT test_label MATCHES "^(unit|integration)$")
+        message(
+            FATAL_ERROR
+            "${test_rel}: test sources belong in tests/unit or tests/integration"
+        )
+    endif()
+
     add_executable(
         "${test_name}"
         "${test_src}"
@@ -74,6 +94,7 @@ foreach(test_src IN LISTS TEST_SOURCES)
         WORKING_DIRECTORY
             "${TEST_FIXTURES_DIR}"
         PROPERTIES
+            LABELS "${test_label}"
             TIMEOUT 120
     )
             
