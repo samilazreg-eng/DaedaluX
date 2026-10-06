@@ -4,6 +4,7 @@
 #include <list>
 #include <memory>
 #include <stack>
+#include <stdexcept>
 #include <set>
 
 #include <daedalux/core/semantic/variable/state.hpp>
