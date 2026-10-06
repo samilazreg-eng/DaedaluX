@@ -4,7 +4,6 @@
 #include <list>
 #include <memory>
 #include <stack>
-#include <stdexcept>
 #include <set>
 #include <stdexcept>
 
