@@ -15,7 +15,6 @@
 #include <daedalux/promela/ast/expr/constExpr.hpp>
 #include <daedalux/promela/ast/expr.hpp>
 
-#include <cuddInt.h>
 
 
 Cudd* TVL::mgr = nullptr;
@@ -289,9 +288,9 @@ void TVL::printBool(const ADD& formula) {
 	//else if(isLogicZero(formula)) printf("None");
 	else if(formula.IsOne()) printf("All");
 	else {
-		formula.manager()->out = fopen("__printbool.tmp","w");
+		Cudd_SetStdout(formula.manager(), fopen("__printbool.tmp","w"));
 		Cudd_PrintMinterm(formula.manager(), formula.getNode());
-		fclose(formula.manager()->out);
+		fclose(Cudd_ReadStdout(formula.manager()));
 		FILE * stream = fopen("__printbool.tmp", "r");
 		char c = 'c';
 		std::string feature;
@@ -362,9 +361,9 @@ std::string TVL::toString(const ADD& formula) {
 	else if(formula.IsZero()) res = "None";
 	else if(formula.IsOne()) res = "All";
 	else {
-		formula.manager()->out = fopen("__printbool.tmp","w");
+		Cudd_SetStdout(formula.manager(), fopen("__printbool.tmp","w"));
 		Cudd_PrintMinterm(formula.manager(), formula.getNode());
-		fclose(formula.manager()->out);
+		fclose(Cudd_ReadStdout(formula.manager()));
 		FILE * stream = fopen("__printbool.tmp", "r");
 		char c = 'c';
 		std::string feature;
@@ -438,7 +437,7 @@ int TVL::getNbProducts(void) const {
 void TVL::printMinterms(const ADD& formula) const {
 
 	//int index = 0;
-	formula.manager()->out = fopen("products", "w");
+	Cudd_SetStdout(formula.manager(), fopen("products", "w"));
 	BDD current = getFeatureModelClauses().BddPattern();
 	ADD res = mgr->addZero();
 	while(!(current.IsZero())) {
@@ -451,7 +450,7 @@ void TVL::printMinterms(const ADD& formula) const {
 		//printBool(minterm.Add() * formula);
 	}
 	//printBool(res);
-	fclose(formula.manager()->out);
+	fclose(Cudd_ReadStdout(formula.manager()));
 }
 
 Cudd* TVL::getMgr(void) {
