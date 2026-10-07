@@ -38,17 +38,20 @@ jobs:
           flex --version
           yacc --version
 
-      - name: Identify the compiler
-        id: compiler
+      - name: Identify the runner image and the compiler
+        id: platform
+        # GitHub-hosted runners set ImageOS and ImageVersion.
         # -dumpversion alone prints only the major version with Ubuntu's GCC.
-        run: echo "version=$("$CC" -dumpfullversion -dumpversion)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "image=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "compiler=$CC-$("$CC" -dumpfullversion -dumpversion)" >> "$GITHUB_OUTPUT"
 
       - name: Restore CUDD from the cache
         id: cudd-cache
         uses: actions/cache@v6
         with:
           path: ~/cudd
-          key: cudd-ubuntu-24.04-${{ env.CC }}-${{ steps.compiler.outputs.version }}-${{ hashFiles('scripts/install-cudd.sh') }}
+          key: cudd-${{ steps.platform.outputs.image }}-${{ steps.platform.outputs.compiler }}-${{ hashFiles('scripts/install-cudd.sh') }}
 
       - name: Install CUDD
         if: steps.cudd-cache.outputs.cache-hit != 'true'
