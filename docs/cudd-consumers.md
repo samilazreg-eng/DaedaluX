@@ -176,7 +176,7 @@ Verification for [#126](https://github.com/samilazreg-eng/DaedaluX/issues/126). 
 | Link line | `libcudd.a` twice | `libcudd.a` once |
 | CUDD files in the repository | 266 files and one archive | none |
 
-### Findings
+### Dependency scope
 
 - **OBSERVED:** In the target graph (`cmake --graphviz`), eight targets have a direct edge to `cudd::cudd`, all `PUBLIC`: the seven modules and `daedalux_lib`. The CLI and the 34 test executables have none. They get CUDD through `daedalux_lib`. No GoogleTest target has one.
 - **OBSERVED:** 130 of the 134 compile commands have the CUDD include path: the 95 library objects, the CLI's source and the 34 test sources. The four without it are GoogleTest's and GoogleMock's sources. The result is the same with GCC and with Clang.
