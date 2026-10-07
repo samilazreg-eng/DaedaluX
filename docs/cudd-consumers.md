@@ -2,6 +2,8 @@
 
 Investigation report for [#63](https://github.com/samilazreg-eng/DaedaluX/issues/63). It maps who uses CUDD and explains why the same archive appears twice on every link line. The build is not changed. Fixes are left to separate issues.
 
+The last section, [After the devendoring](#after-the-devendoring), records the same map once CUDD is an external dependency.
+
 Findings are classified as in [build-characterization.md](build-characterization.md):
 
 - **OBSERVED**: reproduced by a command recorded in this investigation.
@@ -156,3 +158,60 @@ ninja -t commands daedalux_cli | tail -1              # the link line: libcudd.a
 ```
 
 For the multiplicity test, the last command is re-run with the second `libcudd.a` removed and a different `-o`, and the two outputs are compared with `cmp`.
+
+## After the devendoring
+
+Verification for [#126](https://github.com/samilazreg-eng/DaedaluX/issues/126). The sections above describe the build when DaedaluX compiled a vendored CUDD 3.0.0. This one records the same map once DaedaluX consumes an external CUDD 4.0 ([#127](https://github.com/samilazreg-eng/DaedaluX/issues/127)).
+
+- Measured on the branch `build/remove-vendored-cudd` (#132), which contains #129, #130 and #131. Its `README.md` and a comment of `scripts/install-cudd.sh` were reworded after the measurement.
+- CUDD 4.0 at `d1857bf`, installed by `scripts/install-cudd.sh`, one prefix per compiler.
+- Same environment as above: GCC 15.2 and Clang 21.1.8, CMake 4.2.3, Ninja 1.13.2, GNU ld 2.46. Debug, fresh build directories.
+
+| | Before | After |
+|---|---|---|
+| Who provides CUDD | the DaedaluX build: `ExternalProject`, vendored 3.0.0 | the environment: `find_package(cudd 4.0.0 CONFIG REQUIRED)` |
+| CUDD targets | `CUDD::obj` and `CUDD::cudd`, written by hand, same archive | `cudd::cudd`, from CUDD's package |
+| Include paths | eight, directory-wide, on every target | one, from `cudd::cudd` |
+| Build order | all seven modules wait for the CUDD build | no CUDD build |
+| Link line | `libcudd.a` twice | `libcudd.a` once |
+| CUDD files in the repository | 266 files and one archive | none |
+
+### Dependency scope
+
+- **OBSERVED:** In the target graph (`cmake --graphviz`), eight targets have a direct edge to `cudd::cudd`, all `PUBLIC`: the seven modules and `daedalux_lib`. The CLI and the 34 test executables have none. They get CUDD through `daedalux_lib`. No GoogleTest target has one.
+- **OBSERVED:** 130 of the 134 compile commands have the CUDD include path: the 95 library objects, the CLI's source and the 34 test sources. The four without it are GoogleTest's and GoogleMock's sources. The result is the same with GCC and with Clang.
+- **INFERRED:** The path reaches more objects than the ones that use CUDD: at `1740647`, 33 of the 95 library objects and 20 of the 34 test sources included a CUDD header. This is not a leak of the build. CUDD types are in DaedaluX's public headers, so the requirement is `PUBLIC`. Narrowing it means removing CUDD from those headers, which is an API change.
+- **OBSERVED:** CUDD adds no compile definition. The only `-D` on any compile command is GoogleTest's own `GTEST_HAS_PTHREAD=1`.
+- **OBSERVED:** No compile command names `src/libs/cudd` or `ext/cudd`. The build tree has no `ext/` directory and no CUDD object.
+- **OBSERVED:** Each of the 35 executables has the CUDD archive once on its link line.
+- **OBSERVED:** In a fresh build directory, `ninja daedalux_formulas` and `ninja daedalux_visualizer` each succeed alone. Before, every module waited for `CUDD_project`.
+- **OBSERVED:** Configure, build and test from fresh build directories: 121 of 146 with GCC and with Clang. No test differs from the baselines measured with the vendored CUDD (`docs/cudd-4-compatibility.md`).
+- **OBSERVED:** `git ls-files src/libs/cudd src/libs/cudd-release.zip` returns nothing. Outside `docs/`, CUDD is named in the three CMake files that find and link it, in `ci.yml`, `README.md` and `scripts/install-cudd.sh`, in the sources and headers that use it, and in `docker/Dockerfile`.
+
+### Install and package
+
+- **OBSERVED:** `cmake --install` installs no CUDD file. The export says `INTERFACE_LINK_LIBRARIES "cudd::cudd"`, and `daedaluxConfig.cmake` declares no dependency.
+- **OBSERVED:** A consumer that calls only `find_package(daedalux)` fails at configure time: `The link interface of target "daedalux::daedalux_lib" contains: cudd::cudd but the target was not found.`
+- **OBSERVED:** A consumer that calls `find_package(cudd 4.0.0 CONFIG REQUIRED)` first configures, builds and links, with `libdaedalux_lib.a` then `libcudd.a` on its link line. The consumer is a one-line `main` that links `daedalux::daedalux_lib` and includes no DaedaluX header.
+- **INFERRED:** #77 is reduced to one missing `find_dependency(cudd 4.0.0)` in `cmake/daedaluxConfig.cmake.in`. A consumer of the installed DaedaluX needs CUDD 4.0.0 installed too.
+
+### Leaks
+
+None was found in the build. Two known points remain, and each already has an issue:
+
+- the package export does not declare CUDD (#77);
+- `docker/Dockerfile` still downloads and builds CUDD 3.0.0 from `ivmai/cudd` (#84).
+
+### Commands
+
+```bash
+scripts/install-cudd.sh "$PWD/cudd"
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$PWD/cudd" --graphviz=build/deps.dot
+cmake --build build --parallel
+ctest --test-dir build --timeout 120 --output-junit junit.xml
+grep -c "$PWD/cudd/include" build/compile_commands.json       # commands with the CUDD path
+grep -c -E 'src/libs/cudd|ext/cudd' build/compile_commands.json
+ninja -C build -t commands daedalux_cli | tail -1             # link line
+cmake --install build --prefix "$PWD/install"
+grep -n cudd install/lib/cmake/daedalux/daedaluxTargets.cmake
+```
