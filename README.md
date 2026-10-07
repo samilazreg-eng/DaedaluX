@@ -206,6 +206,19 @@ brew update && brew install cmake ninja flex bison boost gmp
 # Install CUDD via Homebrew or from source
 ```
 
+### CUDD
+
+`scripts/install-cudd.sh` installs CUDD 4.0.0 into a prefix of your choice, as a CMake package:
+
+```bash
+scripts/install-cudd.sh "$HOME/.local/cudd"
+```
+
+The script builds a pinned commit of [`cuddorg/cudd`](https://github.com/cuddorg/cudd) (branch `4.0.0`) with CUDD's default options.
+CI uses the same script.
+
+The build does not use this installation yet: it still compiles the copy in `src/libs/cudd`.
+
 ---
 
 ## Contributing
