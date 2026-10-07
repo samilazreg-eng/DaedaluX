@@ -11,21 +11,23 @@
 #include <daedalux/formulas/predicates/valuesPredicate.hpp>
 
 #include "../TestFilesUtils.hpp"
+#include "../TestWorkspace.hpp"
 
 // Define a fixture for the tests
 class TraceGeneratorTest : public ::testing::Test {
 protected:
   void SetUp() override
   {
-    // Common setup code that will be called before each test
+    workspace = std::make_unique<TestWorkspace>();
     std::string current_path = std::filesystem::current_path();
     testFilesUtils = std::make_unique<TestFilesUtils>(current_path);
   }
 
   void TearDown() override
   {
-    // Common teardown code that will be called after each test
+    workspace.reset();
   }
+  std::unique_ptr<TestWorkspace> workspace;
   std::unique_ptr<TestFilesUtils> testFilesUtils;
 };
 

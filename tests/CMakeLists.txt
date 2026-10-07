@@ -18,6 +18,7 @@ FetchContent_MakeAvailable(googletest)
 
 # Test access fixtures relative to the working directory.
 # Use a build-tree copy so tests never modify committed examples.
+# Suites that rewrite inputs use TestWorkspace to copy this input tree per case.
 
 set(
     TEST_FIXTURES_DIR
@@ -88,6 +89,11 @@ foreach(test_src IN LISTS TEST_SOURCES)
         PRIVATE
             daedalux_lib
             GTest::gtest_main
+    )
+
+    target_compile_definitions(
+        "${test_name}"
+        PRIVATE DAEDALUX_TEST_FIXTURES_DIR="${TEST_FIXTURES_DIR}"
     )
 
     gtest_discover_tests(
