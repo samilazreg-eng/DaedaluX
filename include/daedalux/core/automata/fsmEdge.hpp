@@ -5,7 +5,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string>
-#include "cuddObj.hh"
+#include <cudd/cuddObj.hh>
 
 class astNode;
 

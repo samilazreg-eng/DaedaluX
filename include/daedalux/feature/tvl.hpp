@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 
-#include "cuddObj.hh"
+#include <cudd/cuddObj.hh>
 
 class expr;
 class utypeSymNode;
