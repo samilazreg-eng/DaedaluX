@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# Build CUDD 4.0.0 and install it into a prefix, as a CMake package.
-#
-# DaedaluX requires CUDD but does not provide it. Run this once, then pass the
-# prefix to DaedaluX with -DCMAKE_PREFIX_PATH=<prefix>.
+# Build CUDD 4.0.0 and install it into a prefix, as a CMake package (target cudd::cudd).
+# A project that calls find_package(cudd) finds it with -DCMAKE_PREFIX_PATH=<prefix>.
 #
 # Usage: scripts/install-cudd.sh <prefix>
 # Needs: git, cmake, ninja, and a C and C++ compiler (CC and CXX are honoured).
