@@ -2,6 +2,7 @@
 
 include(CMakeFindDependencyMacro)
 
-# Dependencies will be declared here once the installed dependency model is defined.
+# CUDD types are in DaedaluX's public headers, so a consumer needs CUDD too.
+find_dependency(cudd 4.0.0 CONFIG)
 
 include("${CMAKE_CURRENT_LIST_DIR}/daedaluxTargets.cmake")
