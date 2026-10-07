@@ -5,7 +5,6 @@
 #include <string>
 
 #include "cuddObj.hh"
-//#include "cuddInt.h"
 
 class expr;
 class utypeSymNode;
