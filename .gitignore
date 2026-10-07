@@ -29,15 +29,6 @@
 **/pan.*
 **/*.pml.trail
 
-# === Vendor/build cruft under src/libs/cudd ===
-src/libs/cudd/autom4te.cache/
-src/libs/cudd/config.h
-src/libs/cudd/config.log
-src/libs/cudd/config.status
-src/libs/cudd/libtool
-src/libs/cudd/stamp-h1
-src/libs/cudd/**/test*.sh
-
 # === IDE & editor settings (optional keep) ===
 .vscode/        # or, if you want partial, use !.vscode/settings.json etc.
 
