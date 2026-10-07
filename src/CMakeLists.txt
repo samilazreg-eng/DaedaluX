@@ -20,19 +20,18 @@ add_library(
         $<TARGET_OBJECTS:daedalux_visualizer>
 )
 
-add_dependencies(daedalux_core CUDD_project)
-add_dependencies(daedalux_algorithm CUDD_project)
-add_dependencies(daedalux_feature CUDD_project)
-add_dependencies(daedalux_formulas CUDD_project)
-add_dependencies(daedalux_promela CUDD_project)
-add_dependencies(daedalux_mutants CUDD_project)
-add_dependencies(daedalux_visualizer CUDD_project)
+target_link_libraries(daedalux_core PUBLIC cudd::cudd)
+target_link_libraries(daedalux_algorithm PUBLIC cudd::cudd)
+target_link_libraries(daedalux_feature PUBLIC cudd::cudd)
+target_link_libraries(daedalux_formulas PUBLIC cudd::cudd)
+target_link_libraries(daedalux_promela PUBLIC cudd::cudd)
+target_link_libraries(daedalux_mutants PUBLIC cudd::cudd)
+target_link_libraries(daedalux_visualizer PUBLIC cudd::cudd)
 
 target_link_libraries(
     daedalux_lib
     PUBLIC
-        CUDD::obj
-        CUDD::cudd
+        cudd::cudd
 )
 
 target_include_directories(
@@ -61,6 +60,4 @@ target_link_libraries(
     daedalux_cli
     PRIVATE
         daedalux_lib
-        CUDD::obj 
-        CUDD::cudd
 )

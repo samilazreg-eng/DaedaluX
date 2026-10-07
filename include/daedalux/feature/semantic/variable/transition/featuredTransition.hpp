@@ -7,7 +7,7 @@
 
 #include <daedalux/core/semantic/variable/transition/trans.hpp>
 
-#include "cuddObj.hh"
+#include <cudd/cuddObj.hh>
 
 
 // ProcessTransitions are returned by the executables() function

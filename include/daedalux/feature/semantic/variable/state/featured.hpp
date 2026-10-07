@@ -3,7 +3,7 @@
 
 #include <daedalux/core/semantic/variable/state/stateDecorator.hpp>
 
-#include "cuddObj.hh"
+#include <cudd/cuddObj.hh>
 
 class TVL;
 

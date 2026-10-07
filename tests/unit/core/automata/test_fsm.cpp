@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <daedalux/core/automata.hpp>
 #include <daedalux/core/symbol/symTable.hpp>
-#include "cuddObj.hh"
+#include <cudd/cuddObj.hh>
 
 
 class FSMTest : public ::testing::Test {
