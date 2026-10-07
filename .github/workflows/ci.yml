@@ -38,12 +38,27 @@ jobs:
           flex --version
           yacc --version
 
+      - name: Restore CUDD from the cache
+        id: cudd-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/cudd
+          key: cudd-ubuntu-24.04-${{ env.CC }}-${{ hashFiles('scripts/install-cudd.sh') }}
+
+      - name: Install CUDD
+        if: steps.cudd-cache.outputs.cache-hit != 'true'
+        run: scripts/install-cudd.sh "$HOME/cudd"
+
+      - name: Show CUDD
+        run: find "$HOME/cudd" -type f | sort
+
       - name: Configure with BUILD_TESTING=OFF
         run: > 
           cmake -S . -B build-no-tests -G Ninja
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_C_COMPILER="$CC"
           -DCMAKE_CXX_COMPILER="$CXX"
+          -DCMAKE_PREFIX_PATH="$HOME/cudd"
           -DBUILD_TESTING=OFF
 
       - name: Configure
@@ -52,6 +67,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_C_COMPILER="$CC"
           -DCMAKE_CXX_COMPILER="$CXX"
+          -DCMAKE_PREFIX_PATH="$HOME/cudd"
 
       - name: Build
         run: cmake --build build --parallel

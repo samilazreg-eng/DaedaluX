@@ -190,21 +190,32 @@ Before building, install:
 - CMake ≥3.21 (required by the project and its CMake presets)
 - Ninja build system  
 - Flex & Bison (for Promela parsing)  
-- [CUDD](https://github.com/ivmai/cudd) (Binary Decision Diagrams library)
+- [CUDD](https://github.com/cuddorg/cudd) 4.0.0 (Binary Decision Diagrams library), installed as a CMake package
 
 On Ubuntu:
 
 ```bash
 sudo apt-get update && sudo apt-get install   build-essential cmake ninja-build flex bison libgmp-dev   libboost-all-dev
-# CUDD (if packaged) or build from source
 ```
 
 On macOS (Homebrew):
 
 ```bash
 brew update && brew install cmake ninja flex bison boost gmp
-# Install CUDD via Homebrew or from source
 ```
+
+### CUDD
+
+DaedaluX requires CUDD, and the environment provides it: the DaedaluX build does not download it.
+Install CUDD 4.0.0 into a prefix of your choice, then give that prefix to CMake:
+
+```bash
+scripts/install-cudd.sh "$HOME/.local/cudd"
+cmake --preset release -DCMAKE_PREFIX_PATH="$HOME/.local/cudd"
+```
+
+The script builds a pinned commit of [`cuddorg/cudd`](https://github.com/cuddorg/cudd) (branch `4.0.0`) with CUDD's default options.
+CI uses the same script. Any other CUDD 4.0.0 installation that provides the `cudd` CMake package works too.
 
 ---
 
