@@ -26,7 +26,7 @@ Findings are classified as in [build-characterization.md](build-characterization
 - **Compilation:** DaedaluX compiles in C++20 against the 4.0 headers with GCC and with Clang. No compiler warning names a CUDD header.
 - **Link:** one static archive. `cudd::cudd` carries the include directory and the archive, and nothing else.
 - **Tests:** 121 of 146 pass in the four configurations tried, and no test changes status against the baseline.
-- **Output:** no difference that can be attributed to CUDD in the files the tests write.
+- **Output:** no difference that can be attributed to CUDD in the files the tests leave in `<build>/test_fixtures`. Files written in private temporary directories are deleted by the tests and are not compared.
 
 ## Findings
 
@@ -87,7 +87,7 @@ Findings are classified as in [build-characterization.md](build-characterization
 
 - **OBSERVED:** The package installs three headers, under `include/cudd/`. `cuddInt.h`, `mtr.h`, `epd.h`, `st.h` and `util.h` stay in upstream's `src/` and are not installed. There is no `dddmp` in the 4.0 tree.
 - **OBSERVED:** `cudd.h` declares the same 484 `Cudd_*` names in 3.0.0 and in 4.0. The prototypes of the four functions DaedaluX needs (`Cudd_PrintInfo`, `Cudd_PrintMinterm`, `Cudd_ReadStdout`, `Cudd_SetStdout`) are identical.
-- **OBSERVED:** `cuddObj.hh` is the 3.0.0 file with two changes: the classes and `defaultError` carry an export macro (`CUDD_SYMBOL_EXPORT`), and it includes `<cudd/cudd.h>` where 3.0.0 includes `"cudd.h"`. A `diff` that ignores the macro shows the include line and nothing else.
+- **OBSERVED:** `cuddObj.hh` is the 3.0.0 file with two changes: the classes, `defaultError` and the `BDD` stream insertion operator carry an export macro (`CUDD_SYMBOL_EXPORT`), and it includes `<cudd/cudd.h>` where 3.0.0 includes `"cudd.h"`. A `diff` that ignores the macro shows the include line and nothing else.
 - **OBSERVED:** `CUDD_VERSION` is not in the installed headers. In 3.0.0 it is in `cuddInt.h`. DaedaluX does not use it.
 - **OBSERVED:** DaedaluX (outside `src/libs`) uses no `dddmp`, `mtr`, `epd` or `st` function, although the vendored CUDD is configured with `--enable-dddmp`.
 - **INFERRED:** For DaedaluX, CUDD 4.0 at `d1857bf` is CUDD 3.0.0 behind a new build system and a new header location. The API it uses did not change.
@@ -157,9 +157,10 @@ The trial applies three commits on top of `95c3df6`: 11 files, 20 insertions, 10
 
 ### Output
 
-The tests run in `<build>/test_fixtures` and write files there. The directory of the GCC baseline and the one of the GCC trial (Debug) were compared after the test run.
+CTest starts every test in `<build>/test_fixtures`. This section compares what a test run leaves in that directory, for the GCC baseline and the GCC trial (Debug). It does not cover everything the tests write.
 
-- **OBSERVED:** Both hold 1,228 files, and 1,188 are byte-identical. The 40 others are 32 `cmake_test_discovery_*.json` files (they contain the build path), `fsm_graphvis`, and 7 of the 9 `trace_report_*.trace` files.
+- **OBSERVED:** A trace of the files opened for writing during a test run shows three places: `<build>/test_fixtures`, the private `/tmp/daedalux-loader-*` directories of the model loader, and the private `/tmp/daedalux-test-*` directories of `test_mutant_output_folder.cpp` and `test_promela_loader_concurrency.cpp`. The private directories are deleted before the run ends, so they are not compared.
+- **OBSERVED:** Both hold 1,228 files, and 1,188 are byte-identical. The 40 others are 32 `cmake_test_discovery_*.json` files (written by the build, not by the tests; they contain the build path), `fsm_graphvis`, and 7 of the 9 `trace_report_*.trace` files.
 - **OBSERVED:** `fsm_graphvis` contains object addresses. It differs between two runs of the same binaries. With the addresses masked, it is identical in every pair compared, vendored against 4.0 included.
 - **OBSERVED:** The trace files also differ between two builds that use the same CUDD:
 
@@ -172,9 +173,9 @@ The tests run in `<build>/test_fixtures` and write files there. The directory of
 
 - **INFERRED:** The differences in the trace files are not caused by the CUDD version: two builds with the same vendored CUDD differ more than a vendored build and a 4.0 build do.
 - **UNKNOWN:** What makes the trace files vary from one build to the next. It was not investigated here.
-- **OBSERVED:** No file named `cudd_info.txt`, `__printbool.tmp` or `products` exists in the build tree after the test run, with the vendored CUDD or with 4.0.
-- **INFERRED:** No test runs `TVL::initBoolFct`, which writes `cudd_info.txt`, nor the three `tvl.cpp` functions changed in stage C.
-- **UNKNOWN:** Whether `TVL::printBool`, `TVL::toString` and `TVL::printMinterms` write the same text with CUDD 4.0. The prototypes of the functions they call are unchanged, but no test in this run compares their output.
+- **OBSERVED:** In the same trace, no process opens `cudd_info.txt`, `__printbool.tmp` or `products` for writing, with the vendored CUDD or with 4.0. So no test runs `TVL::initBoolFct` or `TVL::printInfo`, which write `cudd_info.txt`, nor the three `tvl.cpp` functions changed in stage C (#133).
+- **OBSERVED:** `cuddUtil.c` and `cuddAPI.c`, which hold `Cudd_PrintMinterm`, `Cudd_PrintInfo`, `Cudd_SetStdout` and `Cudd_ReadStdout`, are identical in the vendored 3.0.0 and in 4.0 at `d1857bf`.
+- **INFERRED:** `TVL::printBool`, `TVL::toString` and `TVL::printMinterms` write the same text with CUDD 4.0, because the CUDD code they call did not change. No test confirms it at run time.
 
 ## Answers to the issue's questions
 
@@ -183,45 +184,107 @@ The tests run in `<build>/test_fixtures` and write files there. The directory of
 3. **C++20, GCC and Clang.** It compiles with both.
 4. **Link requirements.** A static archive, found through `cudd::cudd`. `libm` is needed and comes from the C++ driver. No threads library. A Release-only prefix serves all build types. In Debug the archive is `libcudd_debug.a`.
 5. **Tests.** 121 of 146 in four configurations, the same tests as the baseline, with GCC and with Clang.
-6. **Output.** Nothing attributable to CUDD in the files the tests write. The output of the three `tvl.cpp` print functions is not covered by the tests and stays unknown.
+6. **Output.** Nothing attributable to CUDD in the files the tests leave in `<build>/test_fixtures`. No test runs the three `tvl.cpp` print functions (#133). The CUDD code they call is identical in both versions.
 
 ## Input for the next issues
 
 - **#123 (provisioning):** build `d1857bf` with CUDD's default options, Release, and install it in a prefix. Clone by commit, not by branch or tag. Pass the prefix with `CMAKE_PREFIX_PATH`.
 - **#124 (switch):** stages A and B, in one PR. #117 is stage C and can go first.
-- **#117:** the change is 7 lines and was built and tested here against CUDD 4.0. It was not tested against the vendored 3.0.0.
+- **#117:** the change is 7 lines and was built and tested here against CUDD 4.0. #130 builds and tests it against the vendored 3.0.0.
 - **Upstream:** two points could be reported to `cuddorg/cudd`. There is no `4.0.0` tag, and `cudd::cudd` does not declare `libm`. Neither blocks DaedaluX.
 
 ## Not established
 
 - **UNKNOWN:** whether upstream will tag 4.0.0, and whether the branch `4.0.0` will change again.
-- **UNKNOWN:** behaviour on inputs the test suite does not cover. The comparison is the test suite and the files it writes, nothing more.
+- **UNKNOWN:** behaviour on inputs the test suite does not cover. The comparison is the test suite and the files it leaves in `<build>/test_fixtures`, nothing more.
 - **UNKNOWN:** macOS, Linux ARM64, a shared `libcudd`, and linkers other than GNU ld.
 - **UNKNOWN:** the installed DaedaluX package. `find_package(daedalux)` was not tried against the trial (#77).
 
 ## Reproduction
 
-The scripts used for this report are not committed. The key commands are:
+The scripts used for this report are not committed. These are the commands they ran. `DaedaluX` is a clone at `95c3df6`. `trial` is the same commit with the patch of the appendix applied. `cudd` is a clone of `cuddorg/cudd` at `d1857bfc59f4b09d0aafbdc408221a5a0ac8995e`.
+
+CUDD prefixes and the six configurations of the "Tests" table, in the order of its rows:
 
 ```bash
-# CUDD 4.0 in a prefix
-git clone https://github.com/cuddorg/cudd.git && git -C cudd checkout d1857bfc59f4b09d0aafbdc408221a5a0ac8995e
-cmake -S cudd -B cudd/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PWD/cudd-prefix"
-cmake --build cudd/build && cmake --install cudd/build
-find cudd-prefix -type f | sort
+build_cudd() {  # <cc> <cxx> <type>  ->  prefix/<cc>-<type>
+  cmake -S cudd -B "cudd-build/$1-$3" -G Ninja -DCMAKE_BUILD_TYPE="$3" \
+        -DCMAKE_C_COMPILER="$1" -DCMAKE_CXX_COMPILER="$2" -DCMAKE_INSTALL_PREFIX="$PWD/prefix/$1-$3"
+  cmake --build "cudd-build/$1-$3" && cmake --install "cudd-build/$1-$3"
+}
+build_cudd gcc   g++     Release
+build_cudd gcc   g++     Debug
+build_cudd clang clang++ Release
 
-# DaedaluX with the trial changes (appendix)
-cmake -S DaedaluX -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$PWD/cudd-prefix"
-cmake --build build --parallel
-ctest --test-dir build --timeout 120 --output-junit junit.xml
-ninja -C build -t commands daedalux_cli | tail -1
+run() {  # <name> <source> <cc> <cxx> <type> [<cudd prefix>]
+  cmake -S "$2" -B "build-$1" -G Ninja -DCMAKE_BUILD_TYPE="$5" \
+        -DCMAKE_C_COMPILER="$3" -DCMAKE_CXX_COMPILER="$4" ${6:+-DCMAKE_PREFIX_PATH="$6"}
+  cmake --build "build-$1" --parallel
+  ctest --test-dir "build-$1" --timeout 120 --output-junit "$PWD/build-$1.junit.xml"
+}
+run base-gcc      DaedaluX gcc   g++     Debug
+run base-clang    DaedaluX clang clang++ Debug
+run gcc-debug     trial    gcc   g++     Debug   "$PWD/prefix/gcc-Release"
+run gcc-debug-dbg trial    gcc   g++     Debug   "$PWD/prefix/gcc-Debug"
+run gcc-release   trial    gcc   g++     Release "$PWD/prefix/gcc-Release"
+run clang-debug   trial    clang clang++ Debug   "$PWD/prefix/clang-Release"
 ```
 
-## Appendix: the trial changes
+`4.0.0-rc2` was installed the same way from a checkout of that tag, with GCC, Release.
 
-Not for merging as they are. #124 and #117 own the real changes.
+Test-by-test comparison of two runs. It prints `[]` when no test differs:
 
-`cmake/dependencies/CUDD.cmake`, whole file:
+```bash
+python3 -c '
+import sys, xml.etree.ElementTree as ET
+a, b = ({t.get("name"): t.get("status") for t in ET.parse(p).getroot().iter("testcase")} for p in sys.argv[1:3])
+print(sorted(k for k in a.keys() | b.keys() if a.get(k) != b.get(k)))
+' build-base-gcc.junit.xml build-gcc-debug.junit.xml
+```
+
+Files left by the tests:
+
+```bash
+A=build-base-gcc/test_fixtures; B=build-gcc-debug/test_fixtures
+diff -rq "$A" "$B"
+for f in "$A"/*.trace; do diff <(sort "$f") <(sort "$B/$(basename "$f")") > /dev/null || echo "lines differ: $f"; done
+diff <(sed -E 's/[0-9]{9,}/ADDR/g' "$A/fsm_graphvis") <(sed -E 's/[0-9]{9,}/ADDR/g' "$B/fsm_graphvis")
+```
+
+The trace of the files opened for writing comes from a small `LD_PRELOAD` library that logs the files each process opens for writing. It is not committed. It was run on the branches of #130 (vendored CUDD) and #132 (CUDD 4.0).
+
+Build, link and package checks:
+
+```bash
+ninja -C build-gcc-debug -t commands daedalux_cli | tail -1               # link line
+grep -c -E 'src/libs/cudd|ext/cudd' build-gcc-debug/compile_commands.json  # 0
+grep -c 'prefix/gcc-Release/include' build-gcc-debug/compile_commands.json # commands with the CUDD path
+nm -u prefix/gcc-Release/lib/libcudd.a                                     # needs: libm, no pthread
+readelf -sW prefix/gcc-Release/lib/libcudd.a                               # symbol visibility
+cmake -S trial -B build-nocudd -G Ninja                                    # no CUDD installed: configure fails
+cmake -S trial -B build-rc2 -G Ninja -DCMAKE_PREFIX_PATH="$PWD/prefix-rc2" # rc2: configure fails
+```
+
+The version table comes from a three-line project, `find_package(cudd <version> CONFIG REQUIRED)`, configured against `prefix/gcc-Release` once per version argument.
+
+Header and source comparisons:
+
+```bash
+V=DaedaluX/src/libs/cudd; N=prefix/gcc-Release/include/cudd
+diff <(grep -oE '\bCudd_[A-Za-z0-9_]+\b' $V/cudd/cudd.h | sort -u) <(grep -oE '\bCudd_[A-Za-z0-9_]+\b' $N/cudd.h | sort -u)
+diff <(sed -E 's/CUDD_SYMBOL_EXPORT //g; s/^extern (void defaultError)/\1/' $V/cplusplus/cuddObj.hh) \
+     <(sed -E 's/CUDD_SYMBOL_EXPORT //g' $N/cuddObj.hh)
+diff $V/cudd/cuddUtil.c cudd/src/cuddUtil.c
+diff $V/cudd/cuddAPI.c  cudd/src/cuddAPI.c
+```
+
+## Appendix: the trial patch
+
+This is the complete patch applied to `95c3df6` for the trial: 11 files. It is not for merging as it is. The same changes are proposed in #130 (stage C) and #131 (stages A and B, with seven `target_link_libraries` lines in place of the loop).
+
+### Stage A
+
+`cmake/dependencies/CUDD.cmake`: the 74 lines are replaced by one.
 
 ```cmake
 find_package(cudd 4.0.0 CONFIG REQUIRED)
@@ -230,13 +293,29 @@ find_package(cudd 4.0.0 CONFIG REQUIRED)
 `src/CMakeLists.txt`:
 
 ```diff
+@@ -8,6 +8,10 @@ add_subdirectory(mutants)
+ add_subdirectory(promela)
+ add_subdirectory(visualizer)
+ 
 +foreach(module algorithm core feature formulas mutants promela visualizer)
 +    target_link_libraries(daedalux_${module} PUBLIC cudd::cudd)
 +endforeach()
 +
+ add_library(
+     daedalux_lib 
+     STATIC
+@@ -20,19 +24,11 @@ add_library(
+         $<TARGET_OBJECTS:daedalux_visualizer>
+ )
+ 
 -add_dependencies(daedalux_core CUDD_project)
- (and the six other add_dependencies lines)
-
+-add_dependencies(daedalux_algorithm CUDD_project)
+-add_dependencies(daedalux_feature CUDD_project)
+-add_dependencies(daedalux_formulas CUDD_project)
+-add_dependencies(daedalux_promela CUDD_project)
+-add_dependencies(daedalux_mutants CUDD_project)
+-add_dependencies(daedalux_visualizer CUDD_project)
+ 
  target_link_libraries(
      daedalux_lib
      PUBLIC
@@ -244,31 +323,90 @@ find_package(cudd 4.0.0 CONFIG REQUIRED)
 -        CUDD::cudd
 +        cudd::cudd
  )
-
- target_link_libraries(
+ 
+ target_include_directories(
+@@ -61,6 +57,4 @@ target_link_libraries(
      daedalux_cli
      PRIVATE
          daedalux_lib
--        CUDD::obj
+-        CUDD::obj 
 -        CUDD::cudd
  )
 ```
 
-Seven public headers and `tests/unit/core/automata/test_fsm.cpp`:
+### Stage B
+
+The same one-line change in eight files:
 
 ```diff
 -#include "cuddObj.hh"
 +#include <cudd/cuddObj.hh>
 ```
 
-`src/feature/tvl.cpp`, in `printBool`, `toString` and `printMinterms`:
+- `include/daedalux/core/automata/astToFsm.hpp`
+- `include/daedalux/core/automata/fsm.hpp`
+- `include/daedalux/core/automata/fsmEdge.hpp`
+- `include/daedalux/feature/ADDutils.hpp`
+- `include/daedalux/feature/semantic/variable/state/featured.hpp`
+- `include/daedalux/feature/semantic/variable/transition/featuredTransition.hpp`
+- `include/daedalux/feature/tvl.hpp`
+- `tests/unit/core/automata/test_fsm.cpp`
+
+### Stage C
+
+`src/feature/tvl.cpp`:
 
 ```diff
+@@ -15,7 +15,6 @@
+ #include <daedalux/promela/ast/expr/constExpr.hpp>
+ #include <daedalux/promela/ast/expr.hpp>
+ 
 -#include <cuddInt.h>
-
+ 
+ 
+ Cudd* TVL::mgr = nullptr;
+@@ -289,9 +288,9 @@ void TVL::printBool(const ADD& formula) {
+ 	//else if(isLogicZero(formula)) printf("None");
+ 	else if(formula.IsOne()) printf("All");
+ 	else {
 -		formula.manager()->out = fopen("__printbool.tmp","w");
 +		Cudd_SetStdout(formula.manager(), fopen("__printbool.tmp","w"));
  		Cudd_PrintMinterm(formula.manager(), formula.getNode());
 -		fclose(formula.manager()->out);
 +		fclose(Cudd_ReadStdout(formula.manager()));
+ 		FILE * stream = fopen("__printbool.tmp", "r");
+ 		char c = 'c';
+ 		std::string feature;
+@@ -362,9 +361,9 @@ std::string TVL::toString(const ADD& formula) {
+ 	else if(formula.IsZero()) res = "None";
+ 	else if(formula.IsOne()) res = "All";
+ 	else {
+-		formula.manager()->out = fopen("__printbool.tmp","w");
++		Cudd_SetStdout(formula.manager(), fopen("__printbool.tmp","w"));
+ 		Cudd_PrintMinterm(formula.manager(), formula.getNode());
+-		fclose(formula.manager()->out);
++		fclose(Cudd_ReadStdout(formula.manager()));
+ 		FILE * stream = fopen("__printbool.tmp", "r");
+ 		char c = 'c';
+ 		std::string feature;
+@@ -438,7 +437,7 @@ int TVL::getNbProducts(void) const {
+ void TVL::printMinterms(const ADD& formula) const {
+ 
+ 	//int index = 0;
+-	formula.manager()->out = fopen("products", "w");
++	Cudd_SetStdout(formula.manager(), fopen("products", "w"));
+ 	BDD current = getFeatureModelClauses().BddPattern();
+ 	ADD res = mgr->addZero();
+ 	while(!(current.IsZero())) {
+@@ -451,7 +450,7 @@ void TVL::printMinterms(const ADD& formula) const {
+ 		//printBool(minterm.Add() * formula);
+ 	}
+ 	//printBool(res);
+-	fclose(formula.manager()->out);
++	fclose(Cudd_ReadStdout(formula.manager()));
+ }
+ 
+ Cudd* TVL::getMgr(void) {
 ```
+
+Stage C keeps the behaviour of the code it replaces, including two defects that were already there: the result of `fopen` is not checked, and the manager keeps the closed stream after `fclose`. They are recorded in #134 and are not fixed by the trial.
