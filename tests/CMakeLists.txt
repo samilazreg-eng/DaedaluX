@@ -11,6 +11,11 @@ FetchContent_Declare(
     GIT_TAG        f8d7d77c06936315286eb55f8de22cd23c188571
 )
 
+# GoogleTest serves the test build only: it is not installed or packaged with
+# DaedaluX. No test uses GoogleMock.
+set(INSTALL_GTEST OFF)
+set(BUILD_GMOCK OFF)
+
 FetchContent_MakeAvailable(googletest)
 
 # --------------------------------------------------------------------
