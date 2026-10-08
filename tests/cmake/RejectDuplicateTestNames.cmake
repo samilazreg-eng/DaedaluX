@@ -1,6 +1,9 @@
 # CTest loads this file after the cases of every test executable
 # (TEST_INCLUDE_FILES in tests/CMakeLists.txt). gtest_discover_tests leaves
 # the cases of an executable in the variable <target>_TESTS.
+#
+# Only these cases are compared. An entry that tests/CMakeLists.txt adds with
+# add_test is not seen here.
 
 get_cmake_property(variables VARIABLES)
 
