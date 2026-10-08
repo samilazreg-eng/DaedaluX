@@ -147,26 +147,35 @@ set(TEST_TIMEOUT 120)
 # Creates the executable of one test source and registers its cases with CTest.
 # Every test executable is created here, and nowhere else.
 #
-# <source> is relative to tests/. Its first directory, unit or integration,
-# is the label of its cases.
+# <source> is relative to tests/. Its path gives:
+#   the target   unit/core/symbol/test_symbol.cpp is unit.core.symbol.test_symbol
+#   the label    its first directory, unit or integration
 function(daedalux_add_test test_src)
 
-    if(NOT test_src MATCHES "^(unit|integration)/(.+/)?test_[^/]+\\.cpp$")
+    # No dot is allowed in the path, so that two sources never get the same target.
+    if(NOT test_src MATCHES "^(unit|integration)/([A-Za-z0-9_-]+/)*test_[A-Za-z0-9_-]+\\.cpp$")
         message(
             FATAL_ERROR
             "tests/${test_src} is not a test source.\n"
             "A test source is tests/unit/**/test_<name>.cpp or "
-            "tests/integration/**/test_<name>.cpp. "
+            "tests/integration/**/test_<name>.cpp, with only letters, digits, "
+            "'_' and '-' in its directories and its name. "
             "Code shared by tests belongs in tests/support."
         )
     endif()
 
     set(test_label "${CMAKE_MATCH_1}")
 
-    get_filename_component(
+    string(
+        REGEX REPLACE "\\.cpp$" ""
         test_name
         "${test_src}"
-        NAME_WE
+    )
+
+    string(
+        REPLACE "/" "."
+        test_name
+        "${test_name}"
     )
 
     add_executable(
@@ -199,7 +208,7 @@ endforeach()
 
 add_test(
     NAME TestWorkspaceTest.CasesInOneProcess
-    COMMAND test_workspace
+    COMMAND integration.test_workspace
 )
 
 set_tests_properties(
