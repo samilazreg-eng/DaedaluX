@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-#include "../TestFilesUtils.hpp"
+#include "../support/TestFilesUtils.hpp"
 
 // Define a fixture for the tests
 class ModelAnalyzerTest : public ::testing::Test {
@@ -14,8 +14,7 @@ protected:
   void SetUp() override
   {
     // Common setup code that will be called before each test
-    std::string current_path = std::filesystem::current_path();
-    testFilesUtils = std::make_unique<TestFilesUtils>(current_path);
+    testFilesUtils = std::make_unique<TestFilesUtils>(sharedTestFile);
   }
 
   void TearDown() override

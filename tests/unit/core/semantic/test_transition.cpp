@@ -10,7 +10,7 @@
 #include <daedalux/promela/parser/promela_loader.hpp>
 #include <daedalux/promela/semantic/variable/state/initState.hpp>
 
-#include "../../../TestFilesUtils.hpp"
+#include "../../../support/TestFilesUtils.hpp"
 
 
 class TransitionTest : public ::testing::Test {

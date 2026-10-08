@@ -6,7 +6,7 @@
 #include <daedalux/formulas.hpp>
 
 
-#include "../TestFilesUtils.hpp"
+#include "../support/TestFilesUtils.hpp"
 
 #include <filesystem>
 #include <gtest/gtest.h>
@@ -18,8 +18,7 @@ protected:
   void SetUp() override
   {
     // Common setup code that will be called before each test
-    std::string current_path = std::filesystem::current_path();
-    testFilesUtils = std::make_unique<TestFilesUtils>(current_path);
+    testFilesUtils = std::make_unique<TestFilesUtils>(privateTestFile);
   }
 
   void TearDown() override

@@ -1,3 +1,4 @@
+#include "../support/TestPaths.hpp"
 #include <gtest/gtest.h>
 #include <memory>
 #include <filesystem>
@@ -22,9 +23,7 @@ protected:
 // Test case for loading an invalid Promela file
 TEST_F(SymbolTableTest, LoadValidPromelaFile) {
 
-    std::string current_directory = fs::current_path();
-    std::string file_name = "/test_files/basic/array.pml";
-    std::string file_path = current_directory + file_name;
+    std::string file_path = sharedTestFile("basic/array.pml");
     const TVL* tvl = nullptr;
     auto loader = std::make_unique<promela_loader>(file_path, tvl);
 

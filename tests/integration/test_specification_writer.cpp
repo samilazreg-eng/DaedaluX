@@ -9,6 +9,7 @@
 
 
 #include <filesystem>
+#include "../support/TestPaths.hpp"
 #include <gtest/gtest.h>
 #include <memory>
 
@@ -95,17 +96,13 @@ bool compare_original_and_written_programs(std::string file_name)
 
 TEST_F(DISABLED_SpecificationWriterTest, WriteSimpleSpecification)
 {
-  std::string current_directory = std::filesystem::current_path();
-  std::string file_name = "/test_files/basic/flows.pml";
-  std::string file_path = current_directory + file_name;
+  std::string file_path = sharedTestFile("basic/flows.pml");
   ASSERT_TRUE(compare_original_and_written_programs(file_path));
 }
 
 TEST_F(DISABLED_SpecificationWriterTest, WriteSimpleSpecification_Array)
 {
-  std::string current_directory = std::filesystem::current_path();
-  std::string file_name = "/test_files/basic/array.pml";
-  std::string file_path = current_directory + file_name;
+  std::string file_path = sharedTestFile("basic/array.pml");
   ASSERT_TRUE(compare_original_and_written_programs(file_path));
 }
 
