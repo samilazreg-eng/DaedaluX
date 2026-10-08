@@ -2,6 +2,7 @@
 #include <daedalux/feature/tvl.hpp>
 #include <daedalux/algorithm/ltlModelChecker.hpp>
 #include <daedalux/core/logic.hpp>
+#include "../support/TestPaths.hpp"
 #include <gtest/gtest.h>
 #include <memory>
 
@@ -20,18 +21,16 @@ protected:
   bool isSatisfied(const std::string & filePath)
   {
     const TVL * tvl = nullptr;
-    std::string currentPath = std::filesystem::current_path();
-    auto file_path = currentPath + filePath;
-    return modelChecker->check(file_path);
+    return modelChecker->check(filePath);
   }
 
   std::unique_ptr<ltlModelChecker> modelChecker;
-  std::string promela_ltl_model = "/test_files/ltl/ltl.pml";
-  std::string promela_ltl_model1 = "/test_files/ltl/liveness_1.pml";
-  std::string promela_ltl_model2 = "/test_files/ltl/liveness_2.pml";
-  std::string promela_ltl_model3 = "/test_files/ltl/liveness_3.pml";
-  std::string promela_ltl_model4 = "/test_files/ltl/liveness_4.pml";
-  std::string promela_multiLTL = "/test_files/ltl/ltl_multi.pml";
+  std::string promela_ltl_model = sharedTestFile("ltl/ltl.pml");
+  std::string promela_ltl_model1 = sharedTestFile("ltl/liveness_1.pml");
+  std::string promela_ltl_model2 = sharedTestFile("ltl/liveness_2.pml");
+  std::string promela_ltl_model3 = sharedTestFile("ltl/liveness_3.pml");
+  std::string promela_ltl_model4 = sharedTestFile("ltl/liveness_4.pml");
+  std::string promela_multiLTL = sharedTestFile("ltl/ltl_multi.pml");
 };
 
 TEST_F(LtlModelCheckerTest, ltlModelShouldBeSatisfied) { ASSERT_TRUE(isSatisfied(promela_ltl_model)); }

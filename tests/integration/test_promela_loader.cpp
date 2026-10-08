@@ -1,6 +1,7 @@
 #include <daedalux/promela/parser/promela_loader.hpp>
 
 
+#include "../support/TestPaths.hpp"
 #include <gtest/gtest.h>
 #include <memory>
 
@@ -34,9 +35,7 @@ protected:
 // Test case for loading a valid Promela file
 TEST_F(PromelaLoaderTest, LoadValidPromelaFileFlows)
 {
-  std::string current_directory = fs::current_path();
-  std::string file_name = "/test_files/basic/flows.pml";
-  std::string file_path = current_directory + file_name;
+  std::string file_path = sharedTestFile("basic/flows.pml");
   const TVL * tvl = nullptr;
   auto loader = std::make_unique<promela_loader>(file_path, tvl);
 
@@ -52,9 +51,7 @@ TEST_F(PromelaLoaderTest, LoadValidPromelaFileFlows)
 // Test case for loading a valid Promela file
 TEST_F(PromelaLoaderTest, LoadValidPromelaFileArray)
 {
-  std::string current_directory = fs::current_path();
-  std::string file_name = "/test_files/basic/array.pml";
-  std::string file_path = current_directory + file_name;
+  std::string file_path = sharedTestFile("basic/array.pml");
   const TVL * tvl = nullptr;
   auto loader = std::make_unique<promela_loader>(file_path, tvl);
 

@@ -3,6 +3,7 @@
 #include <daedalux/promela/parser/promela_loader.hpp>
 #include <daedalux/promela/semantic/variable/state/initState.hpp>
 #include <daedalux/core/semantic/variable/state/composite.hpp>
+#include "../support/TestPaths.hpp"
 #include <gtest/gtest.h>
 
 class StateTest : public ::testing::Test {
@@ -18,9 +19,8 @@ protected:
     // Common teardown code for all tests goes here
   }
   std::unique_ptr<state> s;
-  std::string array_model = "/test_files/basic/array.pml";
-  std::string flow_model = "/test_files/basic/flows.pml";
-  std::string current_path = std::filesystem::current_path();
+  std::string array_model = sharedTestFile("basic/array.pml");
+  std::string flow_model = sharedTestFile("basic/flows.pml");
 };
 
 TEST_F(StateTest, DefaultConstructor)
@@ -56,7 +56,7 @@ TEST_F(StateTest, CopyConstructor)
 TEST_F(StateTest, PostStateArray)
 {
   const TVL * tvl = nullptr;
-  auto file_path1 = current_path + array_model;
+  auto file_path1 = array_model;
   auto loader = std::make_unique<promela_loader>(file_path1, tvl);
   auto myFSM = loader->getAutomata().get();
   auto current_state = initState::createInitState(myFSM, tvl);
@@ -77,7 +77,7 @@ TEST_F(StateTest, PostStateArray)
 TEST_F(StateTest, PostStateFlow)
 {
   const TVL * tvl = nullptr;
-  auto file_path1 = current_path + flow_model;
+  auto file_path1 = flow_model;
   auto loader = std::make_unique<promela_loader>(file_path1, tvl);
   auto myFSM = loader->getAutomata().get();
   auto current_state = initState::createInitState(myFSM, tvl);

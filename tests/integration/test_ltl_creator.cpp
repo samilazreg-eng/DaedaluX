@@ -4,6 +4,7 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include "../support/TestPaths.hpp"
 #include <gtest/gtest.h>
 #include <iostream>
 #include <iterator>
@@ -19,19 +20,13 @@ protected:
   {
     // Common teardown code that will be called after each test
   }
-  std::string flows_model = "/test_files/appendClaimTest/flows.pml";
-  std::string current_path = std::filesystem::current_path();
+  std::string flows_model = privateTestFile("appendClaimTest/flows.pml");
 
+  // filePath is a private copy: the claim is appended to it.
   bool appendClaimTest(const std::string & filePath, const std::string & expected_file, const std::string formula)
   {
-    auto tempFilePath = current_path + "/test_files/appendClaimTest/flows_temp.pml";
-    std::filesystem::copy_file(filePath, tempFilePath, std::filesystem::copy_options::overwrite_existing);
-    LTLClaimsProcessor::appendClaimToFile(tempFilePath, formula);
-    // Compare the temporary file with the expected file
-    auto compareResult = compareFiles(tempFilePath, expected_file);
-    // Remove the temporary file
-    std::filesystem::remove(tempFilePath);
-    return compareResult;
+    LTLClaimsProcessor::appendClaimToFile(filePath, formula);
+    return compareFiles(filePath, expected_file);
   }
 
   void removeWhitespace(std::string & str)
@@ -106,8 +101,8 @@ TEST_F(LTLTransformerTest, formulaStringToNeverClaim_Liveness)
 
 TEST_F(LTLTransformerTest, AppendNeverClaim_Globally)
 {
-  auto filePath = current_path + flows_model;
-  std::string expected_file = current_path + "/test_files/appendClaimTest/flows_always_expected.pml";
+  auto filePath = flows_model;
+  std::string expected_file = sharedTestFile("appendClaimTest/flows_always_expected.pml");
   auto formula = "[](x)";
   auto result = appendClaimTest(filePath, expected_file, formula);
   ASSERT_TRUE(result);
@@ -115,17 +110,17 @@ TEST_F(LTLTransformerTest, AppendNeverClaim_Globally)
 
 TEST_F(LTLTransformerTest, AppendToNeverClaim_Finally)
 {
-  auto filePath = current_path + flows_model;
+  auto filePath = flows_model;
   auto formula = "<>(x)";
-  std::string expected_file = current_path + "/test_files/appendClaimTest/flows_eventually_expected.pml";
+  std::string expected_file = sharedTestFile("appendClaimTest/flows_eventually_expected.pml");
   auto result = appendClaimTest(filePath, expected_file, formula);
   ASSERT_TRUE(result);
 }
 
 TEST_F(LTLTransformerTest, AppendToNeverClaim_Liveness)
 {
-  auto filePath = current_path + flows_model;
-  std::string expected_file = current_path + "/test_files/appendClaimTest/flows_liveness_expected.pml";
+  auto filePath = flows_model;
+  std::string expected_file = sharedTestFile("appendClaimTest/flows_liveness_expected.pml");
   auto formula = "[]((!(x)) -> <>x)";
   auto result = appendClaimTest(filePath, expected_file, formula);
   ASSERT_TRUE(result);

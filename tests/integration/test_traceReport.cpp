@@ -2,6 +2,7 @@
 #include <daedalux/feature/tvl.hpp>
 #include <daedalux/promela/parser/promela_loader.hpp>
 #include <daedalux/promela/semantic/variable/state/initState.hpp>
+#include "../support/TestPaths.hpp"
 #include <gtest/gtest.h>
 #include <memory>
 #include <sstream>
@@ -23,8 +24,7 @@ protected:
     // Common teardown code that will be called after each test
   }
   std::unique_ptr<traceReport> report;
-  std::string array_model = "/test_files/basic/array.pml";
-  std::string current_path = std::filesystem::current_path();
+  std::string array_model = sharedTestFile("basic/array.pml");
 };
 
 // Test the addBadTrace and getBadTraces methods
@@ -74,7 +74,7 @@ TEST_F(TraceReportTest, TraceOfArrayLong)
 {
   const TVL * tvl = nullptr;
   auto length = 10;
-  auto file_path = current_path + array_model;
+  auto file_path = array_model;
   auto loader = std::make_unique<promela_loader>(file_path, tvl);
   auto FSM = loader->getAutomata();
   auto current_state = initState::createInitState(FSM.get(), tvl);
