@@ -16,13 +16,13 @@ FetchContent_MakeAvailable(googletest)
 # Test data
 # --------------------------------------------------------------------
 
-# All tests read examples/test_files from one copy in the build tree.
+# All tests read tests/data from one copy in the build tree.
 # Tests must not modify that copy: a case takes a private copy of a file it rewrites.
 # The build redoes the shared copy when a file is edited, added or removed.
 
 set(
     TEST_DATA_SOURCE
-    "${PROJECT_SOURCE_DIR}/examples/test_files"
+    "${CMAKE_CURRENT_SOURCE_DIR}/data"
 )
 
 set(
