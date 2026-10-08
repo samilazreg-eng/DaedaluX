@@ -217,6 +217,24 @@ cmake --preset release -DCMAKE_PREFIX_PATH="$HOME/.local/cudd"
 The script builds a pinned commit of [`cuddorg/cudd`](https://github.com/cuddorg/cudd) (branch `4.0.0`) with CUDD's default options.
 CI uses the same script. Any other CUDD 4.0.0 installation that provides the `cudd` CMake package works too.
 
+### GoogleTest
+
+The tests use GoogleTest 1.14.0, and the build provides it: the first configure of a build directory downloads a pinned commit of [`google/googletest`](https://github.com/google/googletest) into that directory.
+GoogleTest is not installed or packaged with DaedaluX.
+
+Without network access, give CMake a local copy of GoogleTest at that commit, which is the `GIT_TAG` in [tests/CMakeLists.txt](/tests/CMakeLists.txt):
+
+```bash
+# With network access
+git clone https://github.com/google/googletest.git
+git -C googletest checkout <commit>
+
+# Without
+cmake --preset release -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=/path/to/googletest
+```
+
+With `-DBUILD_TESTING=OFF`, the tests are not built and GoogleTest is not needed.
+
 ---
 
 ## Contributing
