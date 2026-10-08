@@ -105,6 +105,8 @@ cmake --build --preset release
 cmake --install build --prefix "$HOME/.local"
 ```
 
+[tests/README.md](/tests/README.md) describes the layout of the tests and how to add one.
+
 ---
 
 ## Usage
