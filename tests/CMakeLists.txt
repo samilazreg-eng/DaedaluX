@@ -132,7 +132,14 @@ list(
 
 include(GoogleTest)
 
-foreach(test_src IN LISTS TEST_SOURCES)
+# CTest stops a test after this many seconds.
+set(TEST_TIMEOUT 120)
+
+# daedalux_add_test(<source>)
+#
+# Creates the executable of one test source and registers its cases with CTest.
+# Every test executable is created here, and nowhere else.
+function(daedalux_add_test test_src)
 
     get_filename_component(
         test_name
@@ -173,13 +180,16 @@ foreach(test_src IN LISTS TEST_SOURCES)
     )
 
     gtest_discover_tests(
-        ${test_name}
+        "${test_name}"
         PROPERTIES
             LABELS "${test_label}"
-            TIMEOUT 120
+            TIMEOUT "${TEST_TIMEOUT}"
     )
-            
 
+endfunction()
+
+foreach(test_src IN LISTS TEST_SOURCES)
+    daedalux_add_test("${test_src}")
 endforeach()
 
 # CTest runs each case in its own process. This entry runs the cases of one
@@ -194,5 +204,5 @@ set_tests_properties(
     TestWorkspaceTest.CasesInOneProcess
     PROPERTIES
         LABELS integration
-        TIMEOUT 120
+        TIMEOUT "${TEST_TIMEOUT}"
 )
