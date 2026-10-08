@@ -84,11 +84,11 @@ set(
     "${CMAKE_CURRENT_BINARY_DIR}/runtime"
 )
 
-set(
-    TEST_SUPPORT_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/support/test_main.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/support/TestEnvironment.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/support/TestPaths.cpp"
+# Every .cpp file below tests/support belongs to this library.
+file(
+    GLOB_RECURSE TEST_SUPPORT_SOURCES
+    CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/support/*.cpp"
 )
 
 add_library(
@@ -119,15 +119,22 @@ add_dependencies(
 # Test targets
 # --------------------------------------------------------------------
 
+# The directory of a .cpp file below tests/ decides what it is:
+#   unit/, integration/   a test source, test_<name>.cpp: one executable
+#   support/              code shared by the tests: daedalux_test_support
+#   data/                 test data: not compiled
+# A .cpp file anywhere else, or under another name, stops the configure.
+
 file(
     GLOB_RECURSE TEST_SOURCES
+    RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
 )
 
 list(
-    REMOVE_ITEM TEST_SOURCES
-    ${TEST_SUPPORT_SOURCES}
+    FILTER TEST_SOURCES
+    EXCLUDE REGEX "^(support|data)/"
 )
 
 include(GoogleTest)
@@ -139,33 +146,28 @@ set(TEST_TIMEOUT 120)
 #
 # Creates the executable of one test source and registers its cases with CTest.
 # Every test executable is created here, and nowhere else.
+#
+# <source> is relative to tests/. Its first directory, unit or integration,
+# is the label of its cases.
 function(daedalux_add_test test_src)
+
+    if(NOT test_src MATCHES "^(unit|integration)/(.+/)?test_[^/]+\\.cpp$")
+        message(
+            FATAL_ERROR
+            "tests/${test_src} is not a test source.\n"
+            "A test source is tests/unit/**/test_<name>.cpp or "
+            "tests/integration/**/test_<name>.cpp. "
+            "Code shared by tests belongs in tests/support."
+        )
+    endif()
+
+    set(test_label "${CMAKE_MATCH_1}")
 
     get_filename_component(
         test_name
         "${test_src}"
         NAME_WE
     )
-
-    # The directory below tests/ is the test's label.
-    file(
-        RELATIVE_PATH test_rel
-        "${CMAKE_CURRENT_SOURCE_DIR}"
-        "${test_src}"
-    )
-
-    string(
-        REGEX MATCH "^[^/]+"
-        test_label
-        "${test_rel}"
-    )
-
-    if(NOT test_label MATCHES "^(unit|integration)$")
-        message(
-            FATAL_ERROR
-            "${test_rel}: test sources belong in tests/unit or tests/integration"
-        )
-    endif()
 
     add_executable(
         "${test_name}"
