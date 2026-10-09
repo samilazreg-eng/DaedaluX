@@ -5,7 +5,7 @@ Characterization for Phase 5 (runtime contract, D7 and D10) of [build-modernizat
 ## 1. Scope and methodology
 
 - **Baseline:** `main` at `e341c7e93e7fd013f0c43034fc97db6d620f6a2e` (2026-10-09, merge of #146). CI is green on it. Line numbers refer to this commit.
-- **Environment:** WSL Ubuntu 26.04.1 (x86-64), GCC and `cpp` 15.2.0, CMake 4.2.3, Ninja 1.13.2, OpenJDK 25.0.4.1, CUDD 4.0.0 from `scripts/install-cudd.sh`. Not installed: `spin`, `ltl2ba`, `owl`, `dot`.
+- **Environment:** WSL Ubuntu 26.04.1 (x86-64), GCC and `cpp` 15.2.0, CMake 4.2.3, Ninja 1.13.2, OpenJDK 25.0.4.1, Python 3.14.4, CUDD 4.0.0 from `scripts/install-cudd.sh`. Not installed: `spin`, `ltl2ba`, `owl`, `dot`, and the Python packages `openai` and `Scarlet`.
 - **Tree:** a `git archive` export of the baseline, a fresh build directory, Debug, Ninja. A Release build of the CLI was added for section 7.
 - **Tools added for the experiments**, outside the repository and without installation:
   - SPIN 6.5.2, the Ubuntu package `spin 6.5.2+dfsg-2build1`, extracted into a private directory and reached through `PATH`. It is the version that `docker/Dockerfile` and `.devcontainer/Dockerfile` build.
@@ -26,7 +26,8 @@ Characterization for Phase 5 (runtime contract, D7 and D10) of [build-modernizat
 4. **Four failure behaviours coexist.** A failing `cpp` ends the process with `exit(1)` inside the library. A failing `ltl2ba` throws `std::runtime_error`, with one message for three causes. A missing `spin` returns `false`, the value that also means "property violated". A `spin` that starts and then fails (no `gcc`, a model that does not parse, a read-only working directory) returns `true`, the value that means "property holds".
 5. **Nothing the runtime needs is installed.** The install is the CLI, the static library and the headers (150 files). The repository tracks two `ltl2ba` binaries, an aarch64 one where the lookup can find it and an x86-64 one that nothing references, plus `ltl2ba` sources that the build ignores and the TVL jar with three jars it needs beside it.
 6. **Test coverage is uneven.** 71 of the 151 enabled cases run `cpp`. 14 reach the `ltl2ba` lookup and fail there. 4 reach `spin`. None reaches Java or `owl`, and no test runs the CLI executable. With `ltl2ba` and SPIN supplied, 142 cases pass instead of 126, serially and under `ctest -j8`.
-7. **The Phase 5 exit criterion is not met.** The three working CLI subcommands and the tests do run from any working directory. LTL translation and TVL loading do not, and `#include` in a model resolves against the working directory.
+7. **Python is used around DaedaluX, not by it.** DaedaluX starts no Python process. 17 tracked scripts do the reverse: some start the CLI under the name `daedalux`, which the build does not produce, read what it prints, or read the trace files it writes. Two need `openai` or `Scarlet`. None is installed, tested or run by CI.
+8. **The Phase 5 exit criterion is not met.** The three working CLI subcommands and the tests do run from any working directory. LTL translation and TVL loading do not, and `#include` in a model resolves against the working directory.
 
 ## 3. Dependency inventory
 
@@ -61,7 +62,26 @@ Listed so that they are not counted as runtime dependencies.
 | CLI11 | compile, vendored header | `include/daedalux/CLI11.hpp` |
 | GoogleTest 1.14.0, `tests/data` | test | `tests/CMakeLists.txt` |
 | CPack (TGZ, ZIP) | package | `cmake/Packaging.cmake` |
-| `scripts/tools/*.py` | separate tooling | `mutation_testing.py` runs `spin`, `gcc`, `./pan` and `../daedalux`. Neither the product nor a test calls these scripts |
+| Python 3, `openai`, `Scarlet-ltl` | tooling around the product | section 3.3 |
+
+### 3.3 Python tooling around DaedaluX
+
+DaedaluX never starts Python. *run*: no log of the CLI, of the probe or of the test suite shows a Python process. *code*: no C++ source, no CMake file and no CI step names Python, and no `.py` file is installed. The dependency runs the other way: the repository tracks 17 Python files, and some of them start DaedaluX or read what it writes. None has a shebang, and no requirements file lists their packages.
+
+| Files | Purpose | Commands they run | Needs beyond the standard library | Link with DaedaluX | State |
+|---|---|---|---|---|---|
+| `scripts/tools/GPTExperiment/*.py` (9) | specification mining with a language model | `./daedalux gen-mutants`, `./daedalux gen-single-traces`, `spin -a`, `gcc`, `./pan` | `openai`, an API key, network access | start the CLI from the working directory, and take the mutant and trace file names from its standard output | *run* PY-1: fails, because the build produces `daedalux_cli` and not `daedalux`. *run* PY-2: with a link named `daedalux` in the working directory, both calls work with the current CLI. *code*: the model paths in `query_chatgpt.py` are `../test_files/...`; the test data is now in `tests/data` |
+| `scripts/tools/mutation_testing.py` | mutation testing of a model against its properties | `../daedalux -f ... -n ... -p ... mutants`, `spin -a`, `gcc`, `./pan`, `rm` | none | starts the CLI with an older command line | *run* PY-3: the current CLI rejects that command line (status 109) |
+| `scripts/tools/ltl_learner.py` | learns an LTL formula from traces | none | `Scarlet` (the package `Scarlet-ltl`) | reads `trace_report_mutex_scarlet.trace`, in the format that `MutantAnalyzer::generateScarletFile` and `generatePredicatesForScarletFile` write | *run* PY-6: the tests write nine `.trace` files, none of that name. Not run: `Scarlet` is not installed here |
+| `scripts/tools/run_tests.py` | an earlier test runner | `./deadalux` | none | none | *run* PY-4: neither `./deadalux` nor `./test` exists |
+| `examples/models/{adapro,elevator,windows}/mutants/script.py` (3) | kill the mutants of one example with SPIN | `spin -a`, `gcc`, `./pan`, `cp`, `rm` | none | read mutant files | not run |
+| `examples/models/csv/csvtodtrace.py` | CSV to Daikon `.dtrace` and `.decls` | none | none | reads CSV traces. Daikon, a Java tool, is the next step and is not in the repository | not run; #28 to #32 |
+| `tests/data/warmingUp/gen_warmingUp.py` | generates test models | none | none | none | no test and no CMake rule runs it |
+
+- **What this tooling relies on in DaedaluX** (*code*, and *run* PY-2): the name and the place of the executable (`./daedalux`, `../daedalux`), the names of the subcommands and of their options, the standard output of `gen-mutants` and `gen-single-traces` (one file name per line), and the two file formats, CSV and Scarlet traces.
+- **SPIN again, by another route.** These scripts run `spin -a`, `gcc` and `./pan` themselves. They do not go through `spinRunner::check`, which runs `spin -run`.
+- **Class.** A machine that runs `daedalux_cli` needs no Python. A user of the mutation-testing and specification-mining workflows does, with `spin`, `gcc`, and for two scripts `openai` or `Scarlet-ltl`.
+- *run*: the 17 files parse under Python 3.14. **UNKNOWN:** the Python and package versions they need, and whether the workflows run end to end.
 
 ## 4. Component → capability → dependency mapping
 
@@ -87,6 +107,7 @@ The seven `OBJECT` libraries are merged into one static archive, `daedalux_lib`.
 | Load a Promela model | `promela_loader` | yes | — | — | — | Yes: every working CLI subcommand and every analysis starts with a load | Yes. `cpp` runs on every load, with no fallback (*code*) |
 | Mutant generation | `MutantAnalyzer::createMutants`, CLI `gen-mutants` | yes (one load) | — | — | — | Yes, CLI feature | only through the load |
 | Trace generation | `TraceGenerator`, CLI `gen-traces`, `gen-single-traces` | yes | — | — | — | Yes, CLI feature | only through the load |
+| Trace export for Scarlet | `MutantAnalyzer::generateScarletFile`, `generatePredicatesForScarletFile` | yes (it loads the model and its mutants) | — | — | — | Library and tests only. No CLI command writes this format | only through the loads. The file is meant for Scarlet, a Python package that DaedaluX does not run (section 3.3) |
 | LTL model checking by DaedaluX | `ltlModelChecker::check` | yes for the file overload | — | — | — | Library and tests only. The never claim must already be in the model | only through the load |
 | LTL formula to never claim | `formula::neverClaim`, `appendClaimToFile`, `appendClaim`, `renewClaimOfFile` | — | yes | — | — | No production caller: `checkFormula` has none, the only `appendClaim` call is commented out (`main_cli.cpp:63`), and tests call the other two. The CLI never uses `--ltl` beyond checking that it is set (`modelchecking_subcommand.cpp:158-166`) | Yes |
 | Formula check on a model and its mutant | `fsmExplorer::checkFormula` | yes | yes | — | — | No caller in `src/`, `include/` or `tests/` | Yes, both |
@@ -249,6 +270,7 @@ For `ltl2ba`, the exception text is the same for a binary of the wrong architect
   | `README.md` | names none of the runtime tools | | | |
 
   **UNKNOWN:** whether either image builds today (#84 reports broken paths in the Docker scripts).
+- **Python** (*code*): `.devcontainer/Dockerfile` installs `python3`, `pip`, a virtual environment, `openai` and `Scarlet-ltl`. `docker/Dockerfile` installs `python3` and `pip`, and copies a `test_scripts` directory that does not exist. CI installs and runs none of it, and the README does not mention it.
 - **Build machine and machine of use.** Nothing records, at configure or install time, which tools the build machine had. A binary carries only the command strings.
 - **Platform.** `system`, `popen`, `mkdtemp`, `getpid` and `<unistd.h>` are POSIX (#14).
 - **Licences.** DaedaluX is MIT. `src/libs/ltl2ba/LICENSE` is the GNU GPL, and its README says version 2 or later. **UNKNOWN:** the terms of `TVLParser.jar`, which the repository does not record.
@@ -270,7 +292,7 @@ For `ltl2ba`, the exception text is the same for a binary of the wrong architect
 | `owl` | 0 | — | — |
 | `fsm_graphvis` | 361 writes in a serial pass, into the working directory of the case: its workspace, or a temporary directory it moves to | — | — |
 
-**Not exercised by any test:** the CLI executable (*run*: no test starts `daedalux_cli`), `fsmExplorer::checkFormula`, `renewClaimOfFile`, `appendClaim`, `MutantAnalyzer::killMutants`, `TVL::loadFeatureModel` and `loadFeatureModelDimacs`, the TVL printing functions (#133), `launchExecutionMarkovChain`, `FormulaSimplifier`, and every failure path of section 6 except the missing `ltl2ba` and the missing `spin`.
+**Not exercised by any test:** the CLI executable (*run*: no test starts `daedalux_cli`), `fsmExplorer::checkFormula`, `renewClaimOfFile`, `appendClaim`, `MutantAnalyzer::killMutants`, `TVL::loadFeatureModel` and `loadFeatureModelDimacs`, the TVL printing functions (#133), `launchExecutionMarkovChain`, `FormulaSimplifier`, every Python script of section 3.3, and every failure path of section 6 except the missing `ltl2ba` and the missing `spin`. Nine TraceGeneratorTest cases write trace files, seven of them through the two Scarlet functions; nothing checks that Scarlet accepts them.
 
 ### 8.2 Suite totals
 
@@ -323,6 +345,10 @@ Each experiment ran in a new, empty directory, under the logger.
 | TVL-4 | CLI `check`: without `-f`, with `-f`, and again | status 1, 1 and 134 |
 | OWL-1 | `FormulaSimplifier::simplify` from the probe | runs `which owl`; returns the formula |
 | CLI-1, 2, 3 | `gen-mutants`, `gen-traces`, a relative model path | `cpp` only; outputs next to the model |
+| PY-1, PY-2 | `DeaduluxRunner` of `GPTExperiment`, imported from an empty directory: without, then with a link named `daedalux` | `CalledProcessError` and no trace; then two mutants and one trace, found through the CLI's standard output |
+| PY-3 | the command line of `mutation_testing.py`, given to the current CLI | status 109, "The following arguments were not expected" |
+| PY-4 | what `run_tests.py` looks for | `./deadalux` and `./test` do not exist |
+| PY-6 | `.trace` files written during a test pass | nine files, none named `trace_report_mutex_scarlet.trace` |
 | INSTALL-1 | the installed CLI from an empty directory | as CPP-1 |
 | T-0 to T-3 | the test suite, section 8.2 | — |
 | T-4 | Release build, `BUILD_TESTING=OFF` | no build path in the binary; behaves as the Debug CLI in CPP-1 and CPP-3a |
@@ -335,6 +361,7 @@ Each experiment ran in a new, empty directory, under the logger.
 - **UNKNOWN:** macOS, Linux ARM64, and a Clang build. The aarch64 `src/bin/ltl2ba` was not run on an ARM machine.
 - **UNKNOWN:** the tools actually present on the CI runner and in the two container images. Section 7 reads their definitions.
 - **UNKNOWN:** the behaviour of the Java path inside DaedaluX, since no input reaches it. TVL-3 runs the same command by hand.
+- **UNKNOWN:** whether the Python workflows of section 3.3 run end to end. They need `openai` with an API key, or `Scarlet`, and neither is installed here. Only `DeaduluxRunner` was run (PY-1, PY-2).
 - **Not run:** the test suite in Release; `launchExecutionMarkovChain` and `mdp.sched`.
 
 ### 8.5 Reproduction
@@ -407,6 +434,10 @@ cmake --install b --prefix prefix && find prefix -type f | wc -l       # 150
 
 **Overall: not met.**
 
+### 9.3 Outside the five requirements
+
+No Phase 5 requirement names the Python tooling of section 3.3, and the exit criterion speaks of the CLI and the tests. The tooling is nevertheless bound to what Phase 5 touches: it starts the CLI by a relative path, under a name the build does not produce, and it reads the CLI's standard output. Related issues: #47 (the binary name in the README), #84 (the Docker image copies a `test_scripts` directory that does not exist), #28 to #32 (`csvtodtrace.py`). No issue covers the command line of `mutation_testing.py` or `scripts/tools/run_tests.py`.
+
 ## 10. Open questions and decisions required before implementation
 
 Each item is a decision for the maintainer. The facts under it come from the sections above.
@@ -427,4 +458,5 @@ Each item is a decision for the maintainer. The facts under it come from the sec
 12. **Tests and the build tree.** The tests locate their data through absolute build-tree paths. Does the exit criterion accept that, or does it ask for tests that can run against an installed DaedaluX?
 13. **Where availability is reported.** The roadmap gives configure a reporting role (#95) and asks for a check at the time of use. #139 owns the test side. Which tools does the product check at run time: all of them, or those of the capabilities D10 declares optional?
 14. **Supported tool versions.** Only SPIN 6.5.2, GCC's `cpp` 15.2 and OpenJDK 25 were observed. Does the runtime contract name versions?
-15. **Coordination with open issues.** #22 owns both lookups, and its LTL part is also scheduled in Phase 4 (#138). #5 owns the fixed names next to them. #21 blocks any end-to-end check of TVL. #41 and #139 own the test side of SPIN. Which of these does Phase 5 take, and which stay where they are?
+15. **The Python tooling.** Is it inside the runtime contract, or separate tooling with its own owner? DaedaluX runs no Python. The scripts depend on the name `daedalux` in the working directory, on the subcommand options and on the CLI's standard output. One uses a command line the CLI no longer accepts, one looks for an executable and a directory that do not exist, and two need packages that only the dev container installs.
+16. **Coordination with open issues.** #22 owns both lookups, and its LTL part is also scheduled in Phase 4 (#138). #5 owns the fixed names next to them. #21 blocks any end-to-end check of TVL. #41 and #139 own the test side of SPIN. Which of these does Phase 5 take, and which stay where they are?
