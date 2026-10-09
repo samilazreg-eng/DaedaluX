@@ -90,11 +90,11 @@ set(
     "${CMAKE_CURRENT_BINARY_DIR}/runtime"
 )
 
-set(
-    TEST_SUPPORT_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/support/test_main.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/support/TestEnvironment.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/support/TestPaths.cpp"
+# Every .cpp file below tests/support belongs to this library.
+file(
+    GLOB_RECURSE TEST_SUPPORT_SOURCES
+    CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/support/*.cpp"
 )
 
 add_library(
@@ -125,46 +125,64 @@ add_dependencies(
 # Test targets
 # --------------------------------------------------------------------
 
+# The directory of a .cpp file below tests/ decides what it is:
+#   unit/, integration/   a test source, test_<name>.cpp: one executable
+#   support/              code shared by the tests: daedalux_test_support
+#   data/                 test data: not compiled
+# A .cpp file anywhere else, or under another name, stops the configure.
+
 file(
     GLOB_RECURSE TEST_SOURCES
+    RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
 )
 
 list(
-    REMOVE_ITEM TEST_SOURCES
-    ${TEST_SUPPORT_SOURCES}
+    FILTER TEST_SOURCES
+    EXCLUDE REGEX "^(support|data)/"
 )
 
 include(GoogleTest)
 
-foreach(test_src IN LISTS TEST_SOURCES)
+# CTest stops a test after this many seconds.
+set(TEST_TIMEOUT 120)
 
-    get_filename_component(
+# daedalux_add_test(<source>)
+#
+# Creates the executable of one test source and registers its cases with CTest.
+# Every test executable is created here, and nowhere else.
+#
+# <source> is relative to tests/. Its path gives:
+#   the target   unit/core/symbol/test_symbol.cpp is unit.core.symbol.test_symbol
+#   the label    its first directory, unit or integration
+function(daedalux_add_test test_src)
+
+    # No dot is allowed in the path, so that two sources never get the same target.
+    if(NOT test_src MATCHES "^(unit|integration)/([A-Za-z0-9_-]+/)*test_[A-Za-z0-9_-]+\\.cpp$")
+        message(
+            FATAL_ERROR
+            "tests/${test_src} is not a test source.\n"
+            "A test source is tests/unit/**/test_<name>.cpp or "
+            "tests/integration/**/test_<name>.cpp, with only letters, digits, "
+            "'_' and '-' in its directories and its name. "
+            "Code shared by tests belongs in tests/support."
+        )
+    endif()
+
+    set(test_label "${CMAKE_MATCH_1}")
+
+    string(
+        REGEX REPLACE "\\.cpp$" ""
         test_name
-        "${test_src}"
-        NAME_WE
-    )
-
-    # The directory below tests/ is the test's label.
-    file(
-        RELATIVE_PATH test_rel
-        "${CMAKE_CURRENT_SOURCE_DIR}"
         "${test_src}"
     )
 
     string(
-        REGEX MATCH "^[^/]+"
-        test_label
-        "${test_rel}"
+        REPLACE "/" "."
+        test_name
+        "${test_name}"
     )
-
-    if(NOT test_label MATCHES "^(unit|integration)$")
-        message(
-            FATAL_ERROR
-            "${test_rel}: test sources belong in tests/unit or tests/integration"
-        )
-    endif()
 
     add_executable(
         "${test_name}"
@@ -179,13 +197,16 @@ foreach(test_src IN LISTS TEST_SOURCES)
     )
 
     gtest_discover_tests(
-        ${test_name}
+        "${test_name}"
         PROPERTIES
             LABELS "${test_label}"
-            TIMEOUT 120
+            TIMEOUT "${TEST_TIMEOUT}"
     )
-            
 
+endfunction()
+
+foreach(test_src IN LISTS TEST_SOURCES)
+    daedalux_add_test("${test_src}")
 endforeach()
 
 # CTest runs each case in its own process. This entry runs the cases of one
@@ -193,12 +214,12 @@ endforeach()
 
 add_test(
     NAME TestWorkspaceTest.CasesInOneProcess
-    COMMAND test_workspace
+    COMMAND integration.test_workspace
 )
 
 set_tests_properties(
     TestWorkspaceTest.CasesInOneProcess
     PROPERTIES
         LABELS integration
-        TIMEOUT 120
+        TIMEOUT "${TEST_TIMEOUT}"
 )
