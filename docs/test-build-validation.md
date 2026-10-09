@@ -12,8 +12,8 @@ Findings are classified as in [build-characterization.md](build-characterization
 
 ## Setup
 
-- Tree: `main` at `8f71c64` with the branches of #144 (`d619614`) and #145 (`5783bba`) merged. Its tree object is `9a3cea64ccc3cd68761b57171a684f9dd605d00b`. This report is the only file added on top of it.
-- Reference: `main` at `8f71c64`, built the same way.
+- Tree: `main` at `a827c41`, which contains #144, with the branch of #145 (`0d8893e`) merged. Its tree object is `1328a8328aca99ea9243f4f8dfd362fa3dc9e5bf`. This report is the only file added on top of it.
+- Reference: `8f71c64`, the commit of `main` before the two pull requests, built the same way. It is called the reference below.
 - Environment: WSL Ubuntu 26.04.1 (x86_64), Ninja 1.13.2, GNU Make 4.4.1, GNU ld 2.46, GCC 15.2.0, Clang 21.1.8, Flex 2.6.4, Bison 3.8.2.
 - CMake: 4.2.3 from the distribution, and 3.21.0 from the official binary archive. 3.21 is the declared minimum.
 - CI: the workflow of the two pull requests, on `ubuntu-24.04` with CMake 3.31.6, Ninja 1.13.2 and GCC 13.3.0.
@@ -39,10 +39,10 @@ Findings are classified as in [build-characterization.md](build-characterization
 - **Testing OFF is a product-only graph.** Nine targets, all product. No `_deps` directory, no `tests` directory, no GoogleTest entry in the cache or in the graph. It configures without network.
 - **Testing ON adds the test graph and nothing to the product.** The nine product targets have the same sources, definitions, include directories, flags and link line with testing ON and OFF, and the installed and packaged files are the same 150.
 - **One function creates the test executables.** The 35 test executables come from one `add_executable` and one `gtest_discover_tests`, both in `daedalux_add_test`, and share one set of requirements.
-- **The registration is preserved.** 154 tests, with the names, arguments, labels, timeouts and working directories of `main`. 40 are labelled `unit` and 114 `integration`, and all have a 120 s timeout.
+- **The registration is preserved.** 154 tests, with the names, arguments, labels, timeouts and working directories of the reference. 40 are labelled `unit` and 114 `integration`, and all have a 120 s timeout.
 - **GoogleTest is pinned, kept out of the installation, and has an offline route.** GoogleMock is not built.
 - **It is reproducible in the environments tried.** The same targets, registration and test results with CMake 4.2.3 and Ninja, CMake 3.21.0 and Unix Makefiles, GCC and Clang, with network and without.
-- **Test results do not change.** 126 passed, 25 failed, 3 disabled in every tree, the same named outcomes as `main` with the same compiler.
+- **Test results do not change.** 126 passed, 25 failed, 3 disabled in every tree, the same named outcomes as the reference with the same compiler.
 
 ## Findings
 
@@ -52,8 +52,8 @@ Findings are classified as in [build-characterization.md](build-characterization
 
 | Tree | CMake | Generator | Compiler | Network | Targets | CTest tests | Installed files | GoogleTest files installed |
 |---|---|---|---|---|---|---|---|---|
-| `main`, ON | 4.2.3 | Ninja | GCC | yes | 78 | 154 | 202 | 52 |
-| `main`, OFF | 4.2.3 | Ninja | GCC | yes | 9 | none | 150 | 0 |
+| reference, ON | 4.2.3 | Ninja | GCC | yes | 78 | 154 | 202 | 52 |
+| reference, OFF | 4.2.3 | Ninja | GCC | yes | 9 | none | 150 | 0 |
 | ON | 4.2.3 | Ninja | GCC | yes | 76 | 154 | 150 | 0 |
 | OFF | 4.2.3 | Ninja | GCC | yes | 9 | none | 150 | 0 |
 | ON | 3.21.0 | Unix Makefiles | GCC | yes | 76 | 154 | 150 | 0 |
@@ -63,8 +63,9 @@ Findings are classified as in [build-characterization.md](build-characterization
 | ON, local GoogleTest copy | 4.2.3 | Ninja | GCC | no | 76 | 154 | 150 | 0 |
 | OFF | 4.2.3 | Ninja | GCC | no | 9 | none | 150 | 0 |
 
-- **OBSERVED:** the 76 targets with testing ON are 36 executables (`daedalux_cli` and 35 tests), 7 object libraries, 4 static libraries (`daedalux_lib`, `daedalux_test_support`, `gtest`, `gtest_main`) and 29 utility targets (`daedalux_test_data` and the 28 dashboard targets of `include(CTest)`). `main` has two more: `gmock` and `gmock_main`.
+- **OBSERVED:** the 76 targets with testing ON are 36 executables (`daedalux_cli` and 35 tests), 7 object libraries, 4 static libraries (`daedalux_lib`, `daedalux_test_support`, `gtest`, `gtest_main`) and 29 utility targets (`daedalux_test_data` and the 28 dashboard targets of `include(CTest)`). The reference has two more: `gmock` and `gmock_main`.
 - **OBSERVED:** the TGZ package holds the same files as the installation in every tree.
+- **OBSERVED:** against `main` at `a827c41`, which already has #144, the tree differs only by #145. With testing ON, the registration, the installed and packaged files and the test results are identical, and so is the build graph apart from the names of the test targets and the order of the three sources of `daedalux_test_support`. With testing OFF, the build graph, the installed files and the packaged files are identical.
 - **OBSERVED:** CI passes on #144 and on #145. It configures with testing OFF, and configures, builds and tests with testing ON.
 
 ### Testing OFF
@@ -74,7 +75,7 @@ Findings are classified as in [build-characterization.md](build-characterization
   - `CMakeCache.txt` has no `FETCHCONTENT_*`, `GTest`, `BUILD_GMOCK` or `INSTALL_GTEST` entry;
   - the build graph does not mention GoogleTest.
 - **OBSERVED:** a fresh OFF configure and build succeed without network.
-- **OBSERVED:** the OFF graph, install list and package list are identical to those of `main` with testing OFF.
+- **OBSERVED:** the OFF graph, install list and package list are identical to those of the reference with testing OFF.
 - **OBSERVED:** outside `tests/`, the only CMake line about testing is `if(BUILD_TESTING)` in the root `CMakeLists.txt`, after `include(CTest)`. No file under `src/` or `cmake/` mentions GoogleTest or `FetchContent`.
 - **OBSERVED:** both presets of `CMakePresets.json` set `BUILD_TESTING` to `ON`. A product-only build needs `-DBUILD_TESTING=OFF` on the command line.
 - **INFERRED:** GoogleTest is acquired and configured only by `tests/CMakeLists.txt`, which is read only when `BUILD_TESTING` is ON.
@@ -104,7 +105,7 @@ Findings are classified as in [build-characterization.md](build-characterization
   link     lib/libgtest.a
   ```
 
-- **OBSERVED:** against `main`, each test executable keeps its source and these requirements. Its target is renamed after its path, for example `test_symbol` becomes `unit.core.symbol.test_symbol`.
+- **OBSERVED:** against the reference, each test executable keeps its source and these requirements. Its target is renamed after its path, for example `test_symbol` becomes `unit.core.symbol.test_symbol`.
 
 ### Source ownership and target names
 
@@ -112,8 +113,8 @@ Each probe adds one file to the tree and configures. None is committed.
 
 | Probe | Result |
 |---|---|
-| `tests/unit/test_state.cpp`, next to `tests/integration/test_state.cpp` | **OBSERVED:** configures, with a second target `unit.test_state`. On `main` the configure fails in `add_executable`. |
-| `tests/unit/core/helpers.cpp` | **OBSERVED:** the configure fails: `tests/unit/core/helpers.cpp is not a test source`, followed by the rule. On `main` it becomes a 36th executable with no case. |
+| `tests/unit/test_state.cpp`, next to `tests/integration/test_state.cpp` | **OBSERVED:** configures, with a second target `unit.test_state`. On the reference the configure fails in `add_executable`. |
+| `tests/unit/core/helpers.cpp` | **OBSERVED:** the configure fails: `tests/unit/core/helpers.cpp is not a test source`, followed by the rule. On the reference it becomes a 36th executable with no case. |
 | `tests/test_stray.cpp`, `tests/perf/test_speed.cpp` | **OBSERVED:** the configure fails with the same message. |
 | `tests/unit/core.symbol/test_x.cpp`, `tests/unit/test my.cpp` | **OBSERVED:** the configure fails with the same message. |
 | `tests/support/Unlisted.cpp` | **OBSERVED:** compiled by `daedalux_test_support`, and by no other target. |
@@ -123,30 +124,24 @@ Each probe adds one file to the tree and configures. None is committed.
 
 ### CTest registration
 
-- **OBSERVED:** 154 tests, 154 distinct names. The name, arguments, labels, timeout and working directory of each are identical to `main`. Only the path of the executable differs.
+- **OBSERVED:** 154 tests, 154 distinct names. The name, arguments, labels, timeout and working directory of each are identical to the reference. Only the path of the executable differs.
 - **OBSERVED:** 40 tests have the label `unit` and 114 the label `integration`. All 154 have a timeout of 120 s. The label and the timeout are set in `daedalux_add_test`; the one entry added by hand, `TestWorkspaceTest.CasesInOneProcess`, uses the same `TEST_TIMEOUT`.
 - **OBSERVED:** the registration is identical in the four ON trees.
-- **OBSERVED:** with a copy of `tests/integration/test_symbol_table.cpp` added as `tests/unit/probe/test_symbol_table.cpp`, a plain `cmake --build` builds the new executable without a manual configure. `ctest` then stops before running anything, with exit code 8, with ctest 4.2.3 and with ctest 3.21.0:
-
-  ```
-  CMake Error at tests/cmake/RejectDuplicateTestNames.cmake:23 (message):
-    Two test executables declare SymbolTableTest.LoadValidPromelaFile.
-  ```
-
-- **OBSERVED:** once the suite of the copy is renamed, both cases are registered, one with the label `unit` and one with `integration`. Once the copy is removed, the next build drops its target and the registration is the recorded one again.
-- **OBSERVED:** the check compares the cases that `gtest_discover_tests` lists. It does not see the entry added by hand: in the generated `CTestTestfile.cmake`, the check is included on the line before that `add_test`. With a case named `TestWorkspaceTest.CasesInOneProcess` added to `test_workspace.cpp`, `ctest -N` lists the name twice and exits with 0 (checked on the branch of #145, where a review comment is open on it).
-- **OBSERVED:** two test sources have all their cases commented out, `test_bisimulation.cpp` and `test_temporalSymNode.cpp`. Their executables are built and register no test, on `main` as here. The 154 tests come from 33 executables.
+- **OBSERVED:** `tests/CTestTestfile.cmake` includes 35 files, all written by `gtest_discover_tests`, and has one `add_test`, as on `main` at `a827c41`.
+- **OBSERVED:** with a new test source `tests/unit/probe/test_symbol_table.cpp` that has a suite of its own, a plain `cmake --build` builds the new executable without a manual configure and registers its case with the label `unit` and a 120 s timeout. Once the file is removed, the next build drops its target and the registration is the recorded one again.
+- **OBSERVED:** a test is named `Suite.Case`, without its executable, as on the reference. CTest accepts one name twice, and nothing in the build detects it. A check was written in #145 and removed there on the maintainer's decision: the project has no established risk of it.
+- **OBSERVED:** two test sources have all their cases commented out, `test_bisimulation.cpp` and `test_temporalSymNode.cpp`. Their executables are built and register no test, on the reference as here. The 154 tests come from 33 executables.
 
 ### Test results
 
-- **OBSERVED:** serial `ctest`: 126 passed, 25 failed, 3 disabled in the four ON trees. The named outcomes are identical to `main` with GCC for the three GCC trees, and to `main` with Clang for the Clang tree. `main` gives the same named outcomes with both compilers.
+- **OBSERVED:** serial `ctest`: 126 passed, 25 failed, 3 disabled in the four ON trees. The named outcomes are identical to the reference with GCC for the three GCC trees, and to the reference with Clang for the Clang tree. The reference gives the same named outcomes with both compilers.
 
 ### GoogleTest
 
 - **OBSERVED:** `<build>/_deps/googletest-src` is at `f8d7d77c06936315286eb55f8de22cd23c188571` in the three ON trees built with network.
 - **OBSERVED:** without network, a fresh ON configure fails with `Could not resolve host: github.com`. With `-DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=<checkout of that commit>` it configures, builds and tests, with the registration and the results of the trees built with network. `_deps` then holds only `googletest-build`.
 - **OBSERVED:** no `gmock` or `gmock_main` target exists.
-- **OBSERVED:** `-DINSTALL_GTEST=ON -DBUILD_GMOCK=ON` on the command line changes neither the install rules nor the targets (checked on the branch of #144).
+- **OBSERVED:** `-DINSTALL_GTEST=ON -DBUILD_GMOCK=ON` on the command line changes neither the install rules nor the targets (checked on the branch of #144, before its merge).
 
 ### Earlier results
 
@@ -158,7 +153,7 @@ Each probe adds one file to the tree and configures. None is committed.
 
 | Criterion | Evidence | Status |
 |---|---|---|
-| #80: immutable acquisition, offline route, no GoogleMock, no install or package | [GoogleTest](#googletest), [Configure and build](#configure-and-build) | met by #144 |
+| #80: immutable acquisition, offline route, no GoogleMock, no install or package | [GoogleTest](#googletest), [Configure and build](#configure-and-build) | met by #144, merged |
 | One creation and registration abstraction, no duplicated setup | [Test executables](#test-executables) | met by #145 |
 | Source ownership documented and enforced | [Source ownership and target names](#source-ownership-and-target-names), `tests/README.md` | met by #145 |
 | Same file names in different directories get distinct targets; unsupported names fail clearly | [Source ownership and target names](#source-ownership-and-target-names) | met by #145 |
