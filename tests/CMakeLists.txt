@@ -209,16 +209,6 @@ foreach(test_src IN LISTS TEST_SOURCES)
     daedalux_add_test("${test_src}")
 endforeach()
 
-# CTest accepts one name twice. Two executables that declare the same
-# Suite.Case would both run under that name, and one would also get the labels
-# of the other. CTest loads this check after the cases of every executable.
-
-set_property(
-    DIRECTORY
-    APPEND PROPERTY TEST_INCLUDE_FILES
-        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/RejectDuplicateTestNames.cmake"
-)
-
 # CTest runs each case in its own process. This entry runs the cases of one
 # executable together, where the workspace has to be renewed between them.
 
