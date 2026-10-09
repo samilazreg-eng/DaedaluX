@@ -26,8 +26,6 @@ Nothing has to be listed: the next build finds the file.
 - **Link.** `daedalux_lib` and `daedalux_test_support`. The source does not define `main`.
 - **CTest.** Each case is one test, named `<Suite>.<Case>`, with the label `unit` or `integration` of its first directory and a 120 s timeout.
 
-A `<Suite>.<Case>` belongs to one executable. When two executables declare the same one, `ctest` stops and names it.
-
 ## Adding shared code
 
 Put the `.cpp` file below `tests/support/`. It is compiled into `daedalux_test_support`, and never as a test executable.
