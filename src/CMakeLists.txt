@@ -61,3 +61,7 @@ target_link_libraries(
     PRIVATE
         daedalux_lib
 )
+
+# Umbrella header check: the build fails if include/daedalux.hpp breaks.
+add_library(daedalux_umbrella_check OBJECT umbrella_check.cpp)
+target_link_libraries(daedalux_umbrella_check PRIVATE daedalux_lib)

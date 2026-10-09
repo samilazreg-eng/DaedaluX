@@ -4,4 +4,4 @@
 #include "daedalux/formulas.hpp"
 #include "daedalux/mutants.hpp"
 #include "daedalux/promela.hpp"
-#include "daedalux/Visualizer.hpp"
+#include "daedalux/visualizer.hpp"
