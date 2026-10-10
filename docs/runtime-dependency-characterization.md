@@ -5,6 +5,12 @@ Identification of the external tools DaedaluX uses at run time: what they are, w
 - Baseline: `main` at `e341c7e`.
 - A runtime dependency is needed on the machine that runs DaedaluX. It is not needed to build it.
 
+## Current policy clarification — 2026-10-10
+
+The observations below describe the recorded baseline and are unchanged. The maintainer's current D7 contract makes `ltl2ba` fully external to DaedaluX CMake: standalone `scripts/install-ltl2ba.sh`, invoked explicitly by the developer, downloads official upstream source, compiles it, and installs the executable in the developer's environment independently of CMake. CMake does not download, compile, stage, install, or implicitly provision it. `TVLParser.jar` remains a provided build-tree resource; `spin`, `cpp`, `gcc`, and `java` remain external.
+
+FeatureSummary reports external runtime availability nonfatally, including with `BUILD_TESTING=ON`; missing `ltl2ba` does not fail configure or build. Location and availability are checked explicitly at use time, with recoverable missing-dependency errors and no launch-directory or source-layout assumptions. LTL translation remains a required product capability; SPIN/TVL remain optional, without new build options solely due to missing tools. Tests requiring missing mandatory `cpp` or `ltl2ba` fail explicitly; tests explicitly conditional on optional capabilities may skip with visible diagnostics. Missing SPIN is not a model-checking verdict. Phase 5 covers build-tree runtime behavior; DaedaluX install/package/export and installed-prefix validation remain Phase 6.
+
 ## Inventory
 
 | Dependency | Used for | Called from | How it is called | How it is located |
