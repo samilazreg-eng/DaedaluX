@@ -56,6 +56,8 @@ The modernization is finished when these hold. Each phase below moves one or mor
 
 ## 3. Dependency model
 
+The D7/D10 and external-runtime test policies below reflect the maintainer's decisions of 2026-10-10. Diagnosis, historical inventory observations, and measured test counts remain characterization evidence, not new findings.
+
 ### 3.1 Classes
 
 A dependency is classified by the phase that needs it. One dependency can belong to several classes.
@@ -64,8 +66,9 @@ A dependency is classified by the phase that needs it. One dependency can belong
 |---|---|---|
 | Build | turn sources into artifacts (Flex, Bison, CUDD's build machinery). Neither linked in nor needed on the machine that runs DaedaluX | configure fails |
 | Compile/link | compile or link a target, through headers, symbols or usage requirements (CUDD). `PUBLIC` when the requirement reaches consumers | configure fails |
-| Runtime | run a built binary (`cpp`, `ltl2ba`, SPIN, Java). Needed on the machine that runs DaedaluX, which may not be the build machine | reported, never fatal |
-| Test | build or run the tests (GoogleTest, test data, runtime tools the tests call) | configure fails, but only when `BUILD_TESTING` is on |
+| External runtime | run a built binary (`cpp`, `ltl2ba`, `spin`, `gcc`, `java`). Needed on the machine that runs DaedaluX, which may not be the build machine | FeatureSummary reports availability nonfatally, including with `BUILD_TESTING=ON` |
+| Provided runtime resource | support runtime functionality with resources supplied by DaedaluX (`TVLParser.jar`) | availability reported; provided in build-tree resources in Phase 5; use-time absence produces a recoverable error |
+| Test | build the tests (GoogleTest) or run them (test data and runtime tools) | required test build dependencies may fail configure when `BUILD_TESTING` is on; external runtime absence never does. Affected mandatory-runtime tests fail explicitly; tests explicitly conditional on optional capabilities may skip with visible diagnostics |
 | Package | install and package (export helpers, CPack generators) | configure fails for install and export rules. Unavailable CPack generators are reported |
 
 CUDD shows why the classes must stay apart. Its autotools build is a build dependency. Its archive and its C++ wrapper headers are a `PUBLIC` compile/link dependency, because CUDD types appear in DaedaluX's public headers. A consumer of the installed package needs the second but not the first. Flex and Bison are the opposite case: build-only, so a package user never needs them.
@@ -82,31 +85,35 @@ The runtime entries come from every `system()` and `popen()` call in `src/` and 
 | CUDD 3.0.0 (vendored) | build + public link | 13 library objects, public headers | always present | always present. Exported per D5 |
 | GoogleTest | test (fetched) | test executables | fetched at the first configure, fails offline | fetched or found when `BUILD_TESTING` is on (phase 4) |
 | `CMakePackageConfigHelpers` | package | export | only included by GoogleTest's build (#71) | included by the project |
-| `cpp` | runtime + test | every model load (`promela_loader.cpp:95`) | `PATH` at run time. The library calls `exit(1)` when it is missing | reported. Required for tests, since almost every test loads a model |
-| `ltl2ba` | runtime + test | LTL to never claim (`ltl.cpp:28`) | `<cwd>/../src/bin`, aarch64 binary | per D7, a build product. Then it is never missing |
-| `spin` | runtime + test | `spinRunner.cpp:40, 68` (`spin -V`, `spin -run`) | `PATH` at run time | reported. SpinRunner tests are skipped when it is missing (#41) |
+| `cpp` | runtime + test | every model load (`promela_loader.cpp:95`) | `PATH` at run time. The library calls `exit(1)` when it is missing | reported nonfatally, including with testing enabled. Tests requiring missing `cpp` fail explicitly |
+| `ltl2ba` | runtime + test | LTL to never claim (`ltl.cpp:28`) | `<cwd>/../src/bin`, aarch64 binary | external per D7, reported nonfatally. Missing `ltl2ba` does not fail configure or build; affected LTL tests fail explicitly |
+| `spin` | runtime + test | `spinRunner.cpp:40, 68` (`spin -V`, `spin -run`) | `PATH` at run time | reported nonfatally. Tests explicitly conditional on optional SPIN may skip with visible diagnostics (#41); absence is not a model-checking verdict |
 | C compiler at run time | runtime | `spin -run` compiles and runs a verifier | never considered | reported with SPIN. INFERRED from SPIN's `-run` behaviour, not observed: SPIN is not installed here |
-| `java` + `TVLParser.jar` | runtime | `tvl.cpp:74` | `java` from `PATH`, the jar from `./libs/tvl` | `java` reported. The jar is vendored, so it is installed and located per D7, not detected |
+| `java` | external runtime | `tvl.cpp:74` | from `PATH` | availability reported nonfatally; checked at TVL use time |
+| `TVLParser.jar` | provided runtime resource | `tvl.cpp:74` | from `./libs/tvl`, tracked under `src/libs/tvl` | available in build-tree resources in Phase 5, with explicit location-independent lookup; installation belongs to Phase 6 |
 | `owl` | none today | `formulaSimplifier.hpp:32` | a `which owl` check. The call itself is commented out | not a dependency. Remove the check or document it |
 
 Graphviz is not a dependency: DaedaluX writes `.dot` files and never runs `dot`. The only `std::thread` use is commented out, so there is no threads dependency either.
 
 ### 3.3 Configure as a gate
 
-Configure answers one question before it generates the build graph: can this configuration be built here? It fails at once when a required build, compile/link, test or package dependency is missing.
+Configure answers one question before it generates the build graph: can this configuration be built here? It fails when a required build, compile/link, enabled-test build, or package dependency is missing. External runtime tools are a separate class even when tests need them; their absence does not make configure fatal.
 
-Runtime dependencies follow a different rule. Configure runs on the build machine, and a binary may run elsewhere. Configure may therefore report a runtime tool, use it to decide which tests to register or skip, and record a default location (D7). A missing runtime tool must never fail configure. It must also never become the binary's only lookup. The binary checks its tools when it runs (phase 5).
+External runtime dependencies follow a different rule. Configure runs on the build machine, and a binary may run elsewhere. FeatureSummary reports external runtime availability nonfatally, including with `BUILD_TESTING=ON`; use-time lookup and availability checks remain necessary. Tests requiring an unavailable mandatory runtime dependency, including `cpp` or `ltl2ba`, fail explicitly rather than produce false successes. Tests explicitly conditional on optional capabilities may skip with visible diagnostics. Missing SPIN must not be confused with a model-checking verdict. Missing `ltl2ba` does not prevent configuring or building DaedaluX.
 
-A capability that is optional by product decision (D10) is recorded as unavailable. It is not hidden behind a build option, so options keep describing real product variability only.
+Each target declares its actual runtime requirements distinctly from build and compile/link dependencies. Acquisition and use are separate responsibilities. Runtime lookup is explicit and independent of the current working directory, source-tree layout, and absolute build-directory location. Missing dependencies produce recoverable errors when the affected functionality is used; optional-capability absence leaves unrelated functionality usable.
+
+D10 keeps LTL translation a required product capability and SPIN/TVL optional. Required product capability does not require its external tool at configure time. No new build options are introduced solely because a runtime tool is missing.
 
 ### 3.4 Summary
 
 CMake's standard modules do this without project-specific code:
 
-- `find_package(... REQUIRED)` for Bison, Flex and Java, which have find modules;
+- `find_package(... REQUIRED)` for Bison and Flex, which are build dependencies with find modules;
+- external runtime tools, including Java and `ltl2ba`, reported nonfatally through FeatureSummary;
 - `find_program(... REQUIRED)` (CMake 3.18) for `make`;
 - `set_package_properties(... TYPE REQUIRED|OPTIONAL|RUNTIME PURPOSE ...)` and `add_feature_info()` for the classes and capabilities;
-- `feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)` to print the report and stop on a missing requirement.
+- `feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)` to print the report and stop on a missing required build/link/package or enabled-test build dependency, without making external runtime absence fatal.
 
 The report ends every configure log, in CI too, and can be pasted into issues. It lists:
 
@@ -118,7 +125,7 @@ It is FeatureSummary's standard layout, not a hand-written one.
 
 ## 4. Decisions required
 
-These choices are the maintainer's. Each one blocks the items that name it in the roadmap.
+These choices are the maintainer's. D7 and D10 below are established decisions as of 2026-10-10; unrelated decision entries are retained. Each decision governs the items that name it in the roadmap.
 
 | # | Decision | Options | Recommendation |
 |---|---|---|---|
@@ -128,10 +135,10 @@ These choices are the maintainer's. Each one blocks the items that name it in th
 | D4 | Tracked parser outputs (#33) | (a) untrack and generate in the build tree; (b) keep as an explicit fallback | (a). The README already requires Flex and Bison. The Ninja build never uses the tracked copies. The regenerated files match them after path normalization. |
 | D5 | CUDD in the installed package | (a) install the vendored `libcudd.a` and headers, and define the target in `daedaluxConfig.cmake`; (b) require consumers to provide CUDD 3.0.0 with its C++ wrapper; (c) remove CUDD from the public headers | (a) now. (c) is an API change and is deferred (section 8). Name the installed target inside the project namespace (for example `daedalux::cudd`), so that it cannot clash with a consumer's own CUDD. |
 | D6 | Exported library name | keep `daedalux::daedalux_lib`; rename to `daedalux::daedalux` | Rename. No consumer can use the package today, so the rename breaks nobody. |
-| D7 | `ltl2ba` and other runtime tools | build `ltl2ba` from `src/libs/ltl2ba`; ship a binary per platform; require it in `PATH` | Build it from the vendored sources as an executable target, install it next to the CLI, and locate it relative to the executable or through a configured path. Delete both committed binaries. Keep `cpp`, `spin`, `java` and the TVL jar as documented external prerequisites, with explicit diagnostics. |
+| D7 | Runtime provisioning | Established: fully external `ltl2ba`; developer-invoked standalone script | DaedaluX CMake does not download, compile, stage, or install `ltl2ba`. Standalone `scripts/install-ltl2ba.sh` is planned Phase 5 work under #153; once implemented, the developer will invoke it explicitly, independently of CMake, to download an official upstream source archive, compile it, and install the executable in the developer's environment. It is never an implicit CMake dependency. Availability is reported nonfatally; location and availability are resolved at LTL use time, with recoverable errors. `spin`, `cpp`, `gcc`, and `java` remain external; `TVLParser.jar` is provided in build-tree resources. |
 | D8 | Source lists | explicit lists; globs with `CONFIGURE_DEPENDS` | Explicit lists, the form CMake recommends. `CONFIGURE_DEPENDS` is the smaller change if the maintainer prefers it. |
 | D9 | Parallel tests until phase 4 | serial `ctest`; `RESOURCE_LOCK` | Serial. `RESOURCE_LOCK` was already declined during the baseline phase. Serial runs are deterministic: 121 / 146 every time. |
-| D10 | Which runtime capabilities are optional | SPIN, TVL (Java) and LTL translation, each required or optional | SPIN and TVL optional: DaedaluX loads and explores models without them, and the CLI reports the missing capability when a command needs it. LTL translation required, which is cheap once `ltl2ba` is built (D7). |
+| D10 | Runtime capability contract | Established: LTL translation required; SPIN and TVL optional | Required product capability does not require external-tool availability at configure time. Missing tools are checked when needed and produce recoverable errors; unrelated functionality remains usable when optional capabilities are unavailable. No new build options are introduced solely because a runtime tool is missing. |
 
 ## 5. Target architecture
 
@@ -142,8 +149,8 @@ flowchart TB
         cudd["CUDD target (one, toolchain-aware)"] --> modules
         modules["7 internal object libraries + project-options target"] --> lib["daedalux::daedalux"]
         lib --> cli["daedalux_cli"]
-        ltl2ba["ltl2ba executable target"] -. runtime .-> cli
     end
+    ltl2ba["external ltl2ba executable (outside CMake provisioning)"] -. runtime .-> cli
     subgraph test ["test graph (BUILD_TESTING)"]
         gtest["GoogleTest (not installed)"] --> tests["test executables"]
         lib --> tests
@@ -155,7 +162,7 @@ flowchart TB
     install --> consumer["package-consumer test"]
 ```
 
-**Configure.** Configure declares every dependency of section 3 with its class, fails on a missing requirement, and prints the summary.
+**Configure.** Configure declares every dependency of section 3 with its class and actual consuming targets, and prints FeatureSummary. Required build/link/package and enabled-test build dependencies retain their configure gate. External runtime absence is nonfatal, including with `BUILD_TESTING=ON`.
 
 **Layout.** The top-level `CMakeLists.txt` only orchestrates: options, dependencies, `add_subdirectory(src)`, `add_subdirectory(tests)` when `BUILD_TESTING` is on, then install and packaging. Helper modules under `cmake/` hold the options, CUDD, and packaging. The exact split does not matter, as long as each concern has one owner. The unused `tests/**/CMakeLists.txt` files are replaced, not revived as they are: they assume an installed DaedaluX.
 
@@ -241,25 +248,29 @@ CI comes first on purpose. Phases 1 to 6 are refactorings, and they need a regre
 2. Add labels and timeouts to every test (#88).
 3. Give each test a private workspace created from immutable data, and locate the data through a CMake-provided path. This fixes #72, #44 and the 11 fixtures rewritten in place (#86). Refresh the data at build time, not only at configure time, and stop copying the unused 28 MB of `models/` (#87).
 4. Remove the fixed temporary names in `ltl.cpp` (`__formula.tmp`, the `ltl.cpp` part of #5).
-5. Make `ltl2ba` available to the tests per D7 (#22). It must land with or after item 4: with `ltl2ba` found and `__formula.tmp` still shared, 20 of 20 parallel runs failed.
-6. Declare the tools the tests run. `cpp` is required when `BUILD_TESTING` is on. When `spin` is missing, the SpinRunner cases are reported as skipped, not failed (#41).
+5. Resolve externally installed `ltl2ba` explicitly for LTL tests per D7 (#22); #153 owns the standalone developer-invoked installation script, outside CMake. Missing `ltl2ba` does not fail configure or build; affected LTL tests fail explicitly. Lookup validation must land with or after item 4: historical reports found 20 of 20 parallel runs failed with `ltl2ba` found and `__formula.tmp` still shared.
+6. Declare the tools the tests run and report availability nonfatally, including with `BUILD_TESTING=ON` (#139). Missing `cpp` does not fail configure; affected mandatory-runtime tests fail explicitly. Tests explicitly conditional on optional SPIN may skip with visible diagnostics (#41); missing SPIN must not become a model-checking verdict.
 7. Remove the tracked root `CTestTestfile.cmake` and `DartConfiguration.tcl`, and the stale `run_tests.py` (#85).
 
-**Exit:** repeated serial and `ctest -j` runs give the same result, and no run changes the test data. With item 5 the result rises from 121 to 135 / 146. Item 6 then turns the two SPIN failures into skips on machines without SPIN.
+**Exit:** repeated serial and `ctest -j` runs give the same named outcomes for the same tool availability, and no run changes the test data. Missing mandatory runtime tools produce explicit affected-test failures; only tests explicitly conditional on optional capabilities may skip with visible diagnostics. Historical reports recorded a rise from 121 to 135 / 146 once `ltl2ba` was supplied, and two SPIN failures without SPIN; those measurements are evidence, not current acceptance totals.
 
 ### Phase 5: runtime contract (D7, D10)
 
-**Input:** [runtime-dependency-characterization.md](runtime-dependency-characterization.md) lists the runtime tools as they are called and located today.
+**Input:** [runtime-dependency-characterization.md](runtime-dependency-characterization.md) preserves the baseline runtime calls and locations. Current D7/D10 and test policy supersede earlier provisioning/configure recommendations, without changing those historical observations.
 
-1. Locate `ltl2ba` and the TVL jar by an installed or configured path, not the working directory (#22). Remove `./libs/tvl`-style lookups.
-2. Report a missing `cpp`, `spin`, `java` or `ltl2ba` as an error the caller can handle, instead of `exit(1)` inside the library. The check happens when the tool is needed, not only at configure time, because the binary may run on another machine.
+**Scope:** build-tree runtime execution and the standalone developer-environment provisioning contract only. DaedaluX installation, packaging, exported targets, and installed-prefix validation remain Phase 6.
+
+1. Resolve external `ltl2ba` location and availability explicitly when LTL translation is invoked (#22). #153 will provide standalone `scripts/install-ltl2ba.sh`, to be explicitly invoked by the developer to download official upstream source, compile it, and install the executable in the developer's environment independently of CMake. CMake must not download, compile, stage, or install `ltl2ba`, or invoke the script implicitly. Locate the provided TVL JAR from build-tree resources independently of launch directory, source layout, and absolute build location; remove `./libs/tvl`-style lookups.
+2. Report a missing `cpp`, `spin`, `gcc`, `java`, `ltl2ba`, or required TVL resource as a recoverable error the caller can handle, instead of terminating the consumer inside the library. The check happens when the tool is needed, not only at configure time, because the binary may run on another machine.
 3. Remove or document the `which owl` check.
 4. Stop writing `fsm_graphvis` and similar debug output into the working directory (#15).
-5. Add no build option unless D10 makes the capability optional.
+5. Declare runtime requirements against their actual consuming targets and report availability through FeatureSummary nonfatally, including with testing enabled. Missing `ltl2ba` does not prevent configuring or building. No new build options are introduced solely because a runtime tool is missing.
 
-**Exit:** the CLI and the tests run from any working directory, without knowing the repository layout.
+**Exit:** the CLI and relevant tests resolve runtime tools/resources independently of launch directory, source-tree layout, and absolute build location. Missing dependencies yield recoverable use-time errors; optional-capability absence leaves unrelated functionality usable. Tests requiring missing mandatory runtime tools fail explicitly, while tests explicitly conditional on optional capabilities may skip with visible diagnostics.
 
 ### Phase 6: install and package (D1, D5, D6)
+
+DaedaluX installation, packaging, exported CMake targets, and installed-prefix validation belong here. The developer's external `ltl2ba` installation through D7's standalone script is independent of DaedaluX CMake and is not DaedaluX package installation.
 
 1. `GNUInstallDirs`. Export the library under the D6 name, with its C++20 requirement (#78) and CUDD as D5 decides (#77).
 2. Fix `daedalux.hpp` (`visualizer.hpp`, #79) and the missing `<cstdint>` and `<stdexcept>` includes (#78). Compile every public header on its own in CI.
@@ -351,7 +362,7 @@ Existing issues the roadmap also relies on: #5, #10, #15, #21, #22, #26, #33, #4
 | Configure dependency summary with FeatureSummary (section 3.4) | S3 | 1 |
 | Remove the unused `BUILD_EXAMPLES` option | S4 | 1 |
 | Enable C in `project()` and check for `make` for the CUDD build | S3 | 3 (could join #83) |
-| Declare the tools the tests run: `cpp` required, SPIN tests skipped when `spin` is missing | S3 | 4 (with #41) |
+| Declare runtime tools used by tests: nonfatal configure reporting, explicit affected-test failures for missing mandatory `cpp`/`ltl2ba`, visible skips only for tests conditional on optional capabilities | S3 | 4 (#139, with #41) |
 | The library calls `exit(1)` when `cpp` is missing, so a consumer process cannot handle it | S3 | 5 |
 | Remove or document the `which owl` check | S4 | 5 |
 | Vendored CLI11 installed as `daedalux/CLI11.hpp` | S3 | 6 |
