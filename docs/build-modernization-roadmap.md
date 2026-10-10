@@ -72,7 +72,7 @@ CUDD shows why the classes must stay apart. Its autotools build is a build depen
 
 ### 3.2 Inventory
 
-The runtime entries come from every `system()` and `popen()` call in `src/` and `include/`, outside the vendored libraries.
+The runtime entries come from every `system()` and `popen()` call in `src/` and `include/`, outside the vendored libraries. [runtime-dependency-characterization.md](runtime-dependency-characterization.md) identifies each of them: what it is used for, where the code calls it, and how it is located.
 
 | Dependency | Class | Used by | Today | Target at configure |
 |---|---|---|---|---|
@@ -248,6 +248,8 @@ CI comes first on purpose. Phases 1 to 6 are refactorings, and they need a regre
 **Exit:** repeated serial and `ctest -j` runs give the same result, and no run changes the test data. With item 5 the result rises from 121 to 135 / 146. Item 6 then turns the two SPIN failures into skips on machines without SPIN.
 
 ### Phase 5: runtime contract (D7, D10)
+
+**Input:** [runtime-dependency-characterization.md](runtime-dependency-characterization.md) lists the runtime tools as they are called and located today.
 
 1. Locate `ltl2ba` and the TVL jar by an installed or configured path, not the working directory (#22). Remove `./libs/tvl`-style lookups.
 2. Report a missing `cpp`, `spin`, `java` or `ltl2ba` as an error the caller can handle, instead of `exit(1)` inside the library. The check happens when the tool is needed, not only at configure time, because the binary may run on another machine.
