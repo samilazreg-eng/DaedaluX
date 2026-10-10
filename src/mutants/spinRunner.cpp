@@ -37,7 +37,7 @@ bool spinRunner::check(const std::string & model_file, const std::shared_ptr<for
     return false;
   }
   // Check that Spin is installed
-  if (spinInstalledFlag == false && std::system("spin -V") != 0) {
+  if (spinInstalledFlag == false && std::system("spin -V > /dev/null 2>&1") != 0) {
     std::cerr << "Error: Spin is not installed." << std::endl;
     return false;
   }
@@ -49,9 +49,7 @@ bool spinRunner::check(const std::string & model_file, const std::shared_ptr<for
   std::string temp_model_file = model_file + "_temp";
   std::filesystem::copy_file(model_file, temp_model_file, std::filesystem::copy_options::overwrite_existing);
 
-  if (!f) {
-  }
-  else {
+  if (f) {
     // Remove any existing LTL claims from the model file
     LTLClaimsProcessor::removeClaimFromFile(temp_model_file);
     // Append the formula to the model file
