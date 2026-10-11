@@ -1,5 +1,7 @@
 add_library(daedalux_core OBJECT)
 
+add_subdirectory(logic)
+
 target_sources(
     daedalux_core
     PRIVATE
@@ -13,8 +15,6 @@ target_sources(
         automata/fsmEdge.cpp
         automata/fsmNode.cpp
         automata/fsmToAst.cpp
-
-        logic/ltl.cpp 
 
         semantic/variable/state/composite.cpp 
         semantic/variable/state/state.cpp 
@@ -37,6 +37,12 @@ target_include_directories(
     daedalux_core
     PUBLIC
         ${PROJECT_SOURCE_DIR}/include
+)
+
+target_link_libraries(
+    daedalux_core
+    PRIVATE
+        daedalux_ltl
 )
 
 target_compile_features(
