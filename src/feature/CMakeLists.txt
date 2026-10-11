@@ -22,3 +22,18 @@ target_compile_features(
     PUBLIC
         cxx_std_20
 )
+
+set_property(
+    TARGET 
+        daedalux_feature
+    PROPERTY 
+        DAEDALUX_RUNTIME_DEPENDENCIES java TVLParser.jar
+)
+
+find_program(JAVA_EXECUTABLE NAMES java)
+
+add_feature_info(
+    FEATURE_JAVA
+    JAVA_EXECUTABLE
+    "java runtime dependency for TVL parser processing"
+)

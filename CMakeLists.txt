@@ -6,6 +6,11 @@ project(
   LANGUAGES CXX
 )
 
+if(POLICY CMP0183)
+    cmake_policy(SET CMP0183 NEW)
+endif()
+
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # --------------------------------------------------------------------
@@ -49,3 +54,7 @@ endif()
 
 include(cmake/Install.cmake)
 include(cmake/Packaging.cmake)
+
+feature_summary(
+  WHAT ENABLED_FEATURES DISABLED_FEATURES
+)

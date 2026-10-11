@@ -53,3 +53,18 @@ target_sources(
         ${LEXER_CPP}
         ${CMAKE_CURRENT_SOURCE_DIR}/promela_loader.cpp
 )
+
+set_property(
+    TARGET 
+        promela_parser
+    PROPERTY
+        DEADALUX_RUNTIME_DEPENDENCIES cpp
+)
+
+find_program(CPP_EXECUTABLE NAMES cpp)
+
+add_feature_info(
+    PARSER_CPP
+    CPP_EXECUTABLE
+    "C preprocessor runtime dependency for promela parsing"
+)
