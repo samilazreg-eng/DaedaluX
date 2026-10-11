@@ -64,7 +64,7 @@ test -s "$work/clauses.txt"
 echo "PASS: TVL-to-DIMACS conversion"
 
 # Install the parser distribution, preserving nearby auxiliary libraries
-destination="$prefix/share/daedalux/tvl"
+destination="$prefix/share"
 
 mkdir -p "$destination"
 cp -R "$jar_dir/." "$destination/"

@@ -37,3 +37,16 @@ add_feature_info(
     JAVA_EXECUTABLE
     "java runtime dependency for TVL parser processing"
 )
+
+
+find_file(TVL_PARSER_JAR
+    NAMES TVLParser.jar
+    PATHS_SUFFIXES
+        share
+)
+
+add_feature_info(
+    FEATURE_TVL_PARSER
+    TVL_PARSER_JAR
+    "TVL parser runtime dependency for TVL processing"
+)
