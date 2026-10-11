@@ -30,7 +30,7 @@ tar -xzf "$work/ltl2ba.tar.gz" \
 
 # Build using the upstream Makefile 
 make -C "$work/src" \
-    CC=${CC:-cc} \
+    CC="${CC:-cc}" \
     CFLAGS="-O2 -DNXT" \
     ltl2ba
 
