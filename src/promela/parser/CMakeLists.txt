@@ -58,7 +58,7 @@ set_property(
     TARGET 
         promela_parser
     PROPERTY
-        DEADALUX_RUNTIME_DEPENDENCIES cpp
+        DAEDALUX_RUNTIME_DEPENDENCIES cpp
 )
 
 find_program(CPP_EXECUTABLE NAMES cpp)
